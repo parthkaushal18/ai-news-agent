@@ -14,6 +14,7 @@ from typing import Optional
 import feedparser
 import requests
 from fastapi import FastAPI, Query
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 
 REDIS_URL = os.environ.get("REDIS_URL", "")
@@ -221,9 +222,15 @@ def fetch_all() -> tuple[list, datetime]:
 app = FastAPI(title="AI News Agent", version="1.0.0", docs_url="/docs")
 _start = time.time()
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-@app.get("/health")
-def health():
+
+def _health_payload():
     articles, last_fetch = load_cache()
     secs_since = (time.time() - last_fetch.timestamp()) if last_fetch else REFRESH_INTERVAL
     return {
@@ -236,14 +243,7 @@ def health():
         "next_fetch_in": max(0, REFRESH_INTERVAL - int(secs_since)),
     }
 
-
-@app.get("/news")
-def get_news(
-    category: Optional[str] = Query(None),
-    source:   Optional[str] = Query(None),
-    q:        Optional[str] = Query(None),
-    limit:    int           = Query(50, le=120),
-):
+def _news_payload(category, source, q, limit):
     articles, last_fetch = load_cache()
     items = articles
     if category:
@@ -255,8 +255,47 @@ def get_news(
         items = [a for a in items if ql in a.get("title","").lower() or ql in a.get("summary","").lower()]
     return {"total": len(items), "articles": items[:limit], "last_fetch": last_fetch.isoformat() if last_fetch else None}
 
+def _sources_payload():
+    articles, _ = load_cache()
+    src_counts: dict = {}
+    cat_counts: dict = {}
+    for a in articles:
+        s = a.get("source", "")
+        c = a.get("category", "")
+        src_counts[s] = src_counts.get(s, 0) + 1
+        cat_counts[c] = cat_counts.get(c, 0) + 1
+    configured = [f["name"] for f in RSS_FEEDS] + ["Hacker News", "arXiv"]
+    return {
+        "sources": [{"name": s, "count": src_counts.get(s, 0)} for s in configured],
+        "categories": [{"name": c, "count": n} for c, n in sorted(cat_counts.items(), key=lambda x: -x[1])],
+    }
+
+
+@app.get("/health")
+@app.get("/api/health")
+def health():
+    return _health_payload()
+
+
+@app.get("/news")
+@app.get("/api/news")
+def get_news(
+    category: Optional[str] = Query(None),
+    source:   Optional[str] = Query(None),
+    q:        Optional[str] = Query(None),
+    limit:    int           = Query(50, le=120),
+):
+    return _news_payload(category, source, q, limit)
+
+
+@app.get("/sources")
+@app.get("/api/sources")
+def get_sources():
+    return _sources_payload()
+
 
 @app.post("/refresh")
+@app.post("/api/refresh")
 def trigger_refresh():
     articles, last_fetch = fetch_all()
     return {"message": "Done", "articles": len(articles), "last_fetch": last_fetch.isoformat()}
