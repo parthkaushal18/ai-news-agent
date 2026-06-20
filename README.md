@@ -2,7 +2,7 @@
 
 An autonomous AI news aggregator that continuously fetches, filters, and surfaces the latest AI articles from 12 curated sources — deployed as a serverless app on Vercel.
 
-**Live App:** [ai-news-agent.vercel.app](https://ai-news-agent.vercel.app)
+**Live App:** [ai-news-agent-indol.vercel.app](https://ai-news-agent-indol.vercel.app)
 
 ---
 
