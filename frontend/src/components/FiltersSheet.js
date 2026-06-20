@@ -14,7 +14,7 @@ export default function FiltersSheet({ open, onClose, sources, activeSrc, onSele
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onClose}
-            className="absolute inset-0 z-30 bg-ink/30 backdrop-blur-sm"
+            className="absolute inset-0 z-30 bg-ink/40"
           />
           <motion.div
             key="sheet"

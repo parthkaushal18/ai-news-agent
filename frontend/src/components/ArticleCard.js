@@ -1,18 +1,13 @@
 import React from "react";
-import { motion } from "framer-motion";
 import { BookmarkSimple, ArrowUpRight } from "@phosphor-icons/react";
 import { SRC_COLORS, CAT_COLORS, timeAgo } from "../constants";
 
-export default function ArticleCard({ article, index, saved, onToggleSave, testIdPrefix = "article-card" }) {
+function ArticleCard({ article, index, isSaved, onToggleSave, testIdPrefix = "article-card" }) {
   const sc = SRC_COLORS[article.source] || "#525252";
   const cc = CAT_COLORS[article.category] || "#525252";
-  const isSaved = saved.includes(article.id);
 
   return (
-    <motion.article
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.35, delay: Math.min(index * 0.04, 0.4), ease: [0.22, 1, 0.36, 1] }}
+    <article
       className="group relative border-b border-bone bg-paper hover:bg-bone/40 transition-colors"
       data-testid={`${testIdPrefix}-${index}`}
     >
@@ -63,6 +58,8 @@ export default function ArticleCard({ article, index, saved, onToggleSave, testI
           className={isSaved ? "text-klein" : "text-faint hover:text-ink"}
         />
       </button>
-    </motion.article>
+    </article>
   );
 }
+
+export default React.memo(ArticleCard);

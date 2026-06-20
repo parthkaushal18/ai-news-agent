@@ -68,7 +68,7 @@ export default function App() {
   const [filtersOpen, setFiltersOpen] = useState(false);
 
   const [saved, toggleSave] = useSaved();
-  const [countdown, setCountdown] = useState(0);
+  const [initialCountdown, setInitialCountdown] = useState(0);
 
   const loadAll = useCallback(async () => {
     try {
@@ -81,7 +81,7 @@ export default function App() {
       setSources(sourcesRes.data.sources || []);
       setCategories(sourcesRes.data.categories || []);
       setHealth(healthRes.data);
-      setCountdown(healthRes.data.next_fetch_in || 0);
+      setInitialCountdown(healthRes.data.next_fetch_in || 0);
       setError(null);
     } catch (e) {
       console.error("load error", e);
@@ -96,11 +96,6 @@ export default function App() {
     const id = setInterval(loadAll, 5 * 60 * 1000);
     return () => clearInterval(id);
   }, [loadAll]);
-
-  useEffect(() => {
-    const id = setInterval(() => setCountdown((c) => Math.max(0, c - 1)), 1000);
-    return () => clearInterval(id);
-  }, []);
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -164,7 +159,7 @@ export default function App() {
     <div className="min-h-[100dvh] bg-ink flex justify-center">
       {/* Phone-frame container — full bleed on mobile, framed on desktop */}
       <div
-        className="relative app-shell w-full max-w-md min-h-[100dvh] bg-paper overflow-hidden flex flex-col grain"
+        className="relative app-shell w-full max-w-md min-h-[100dvh] bg-paper overflow-hidden flex flex-col"
         data-testid="app-shell"
       >
         {/* ── Top Bar ── */}
@@ -211,7 +206,7 @@ export default function App() {
           <span className="text-bone/40">·</span>
           <span><b className="text-amber">{health?.sources ?? "—"}</b>&nbsp;sources</span>
           <span className="text-bone/40">·</span>
-          <span>NEXT&nbsp;<b className="text-amber">{formatCountdown(countdown)}</b></span>
+          <span>NEXT&nbsp;<b className="text-amber"><Countdown seedSeconds={initialCountdown} /></b></span>
           <span className="ml-auto inline-flex items-center gap-1.5">
             <span className="inline-block w-1.5 h-1.5 rounded-full bg-signal animate-pulse" />
             LIVE
@@ -247,7 +242,7 @@ export default function App() {
 
         {/* ── Bottom Tab Bar ── */}
         <nav
-          className="absolute left-0 right-0 bottom-0 z-20 bg-paper/85 backdrop-blur-xl border-t border-ink bottom-safe"
+          className="absolute left-0 right-0 bottom-0 z-20 bg-paper border-t border-ink bottom-safe"
           data-testid="bottom-tab-nav"
         >
           <div className="flex justify-around items-stretch">
@@ -355,7 +350,13 @@ function FeedScreen({ hero, feed, categories, activeCat, setActiveCat, activeSrc
         </div>
       ) : (
         feed.map((a, i) => (
-          <ArticleCard key={a.id || i} article={a} index={i} saved={saved} onToggleSave={toggleSave} />
+          <ArticleCard
+            key={a.id || i}
+            article={a}
+            index={i}
+            isSaved={saved.includes(a.id)}
+            onToggleSave={toggleSave}
+          />
         ))
       )}
 
@@ -386,7 +387,7 @@ function TrendingScreen({ articles, saved, toggleSave }) {
             key={a.id || i}
             article={a}
             index={i}
-            saved={saved}
+            isSaved={saved.includes(a.id)}
             onToggleSave={toggleSave}
             testIdPrefix="trending-card"
           />
@@ -424,7 +425,7 @@ function SavedScreen({ articles, saved, toggleSave }) {
             key={a.id || i}
             article={a}
             index={i}
-            saved={saved}
+            isSaved={saved.includes(a.id)}
             onToggleSave={toggleSave}
             testIdPrefix="saved-card"
           />
@@ -505,6 +506,18 @@ function EmptyState({ onRefresh, refreshing }) {
       </button>
     </div>
   );
+}
+
+function Countdown({ seedSeconds }) {
+  const [secs, setSecs] = useState(seedSeconds);
+  useEffect(() => {
+    setSecs(seedSeconds);
+  }, [seedSeconds]);
+  useEffect(() => {
+    const id = setInterval(() => setSecs((c) => Math.max(0, c - 1)), 1000);
+    return () => clearInterval(id);
+  }, []);
+  return <>{formatCountdown(secs)}</>;
 }
 
 function Footer() {
