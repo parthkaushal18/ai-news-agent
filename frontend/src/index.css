@@ -1,0 +1,53 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html, body, #root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: 'IBM Plex Sans', system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background: #0A0A0A;
+  color: #0A0A0A;
+}
+
+/* Hide scrollbars on horizontal chip rails */
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* Custom scrollbar inside the mobile container */
+.app-shell::-webkit-scrollbar { width: 4px; }
+.app-shell::-webkit-scrollbar-thumb { background: #E5E5E0; border-radius: 9999px; }
+
+/* Crosshatch pattern for hero accent */
+.crosshatch {
+  background-image:
+    repeating-linear-gradient(45deg, #0A0A0A 0 1px, transparent 1px 6px),
+    repeating-linear-gradient(-45deg, #0A0A0A 0 1px, transparent 1px 6px);
+}
+
+/* Tactile press */
+.tactile { transition: transform 80ms ease-out; }
+.tactile:active { transform: scale(0.97); }
+
+/* Safe-area aware bottom padding for fixed bottom nav */
+.pb-tab { padding-bottom: calc(76px + env(safe-area-inset-bottom)); }
+.bottom-safe { padding-bottom: env(safe-area-inset-bottom); }
+
+/* Selection */
+::selection { background: #0000FF; color: #fff; }
+
+/* Subtle grain (very low opacity noise via SVG data URI) */
+.grain::before {
+  content: "";
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  opacity: 0.035;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
