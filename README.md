@@ -21,14 +21,14 @@ An autonomous AI news aggregator that continuously fetches, filters, and surface
 - Articles sorted by publish date (newest first)
 
 ### Web UI
-- Dark, minimal interface with sticky header and live status indicator
-- **Sidebar filters** by category (Industry, Research, Research Paper, Community, Newsletter) and by source
-- **Full-text search** across titles, summaries, and sources
-- Color-coded source and category tags per article
-- Relative timestamps ("2h ago", "3d ago")
-- Manual refresh button
-- Countdown to next auto-fetch
-- Mobile responsive
+- Vintage newspaper interface ("The Artificial Chronicle") with warm paper background, ink-stamped filters, and double-rule borders
+- **Sidebar filters** styled as departments/correspondents with selection stamps
+- **Full-text search** across titles and summaries with typewriter highlights
+- Stamp-style source and category indicators per article
+- Relative timestamps and reading duration estimates
+- Manual fetch button triggering telegram-style visual notifications
+- Typewriter countdown ledger to next auto-fetch
+- Mobile responsive column collapsing
 
 ### REST API
 | Endpoint | Method | Description |
