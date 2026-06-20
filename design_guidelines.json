@@ -1,0 +1,132 @@
+{
+  "theme": "Light",
+  "archetype": "Archetype 4: Swiss & High-Contrast",
+  "domain_context": "AI News Aggregator Web App (Mobile First, Editorial)",
+  "design_philosophy": "Objective, rigid, and functional. A futuristic, minimalist news terminal avoiding typical dark-mode AI slop (no purple/teal gradients). Relies on stark contrast, sharp borders, and distinct typography to create an authoritative editorial feel.",
+  "colors": {
+    "background": {
+      "app": "#F4F4F0",
+      "surface": "#FFFFFF",
+      "overlay": "rgba(244, 244, 240, 0.8)"
+    },
+    "text": {
+      "primary": "#0A0A0A",
+      "secondary": "#525252",
+      "tertiary": "#8C8C8C",
+      "inverse": "#FFFFFF"
+    },
+    "brand": {
+      "primary": "#0000FF",
+      "danger_live": "#FF3B30",
+      "warning": "#FFCC00"
+    },
+    "border": {
+      "default": "#E5E5E0",
+      "focus": "#0000FF",
+      "dark": "#0A0A0A"
+    }
+  },
+  "typography": {
+    "font_families": {
+      "heading": "'Cabinet Grotesk', sans-serif",
+      "body": "'IBM Plex Sans', sans-serif",
+      "mono": "'IBM Plex Mono', monospace"
+    },
+    "scale": {
+      "h1_hero": "text-4xl sm:text-5xl font-black tracking-tighter leading-none",
+      "h2_section": "text-2xl font-bold tracking-tight leading-tight",
+      "h3_article_title": "text-lg sm:text-xl font-bold tracking-tight leading-snug",
+      "body_base": "text-base font-normal leading-relaxed text-[#0A0A0A]",
+      "body_sm": "text-sm font-normal leading-relaxed text-[#525252]",
+      "meta_mono": "text-[10px] sm:text-xs font-mono uppercase tracking-[0.1em]",
+      "stats_mono": "text-sm font-mono tracking-tight"
+    }
+  },
+  "spacing_and_layout": {
+    "container": "w-full max-w-md mx-auto min-h-[100dvh] bg-[#F4F4F0] relative sm:border-x sm:border-[#E5E5E0] shadow-2xl shadow-black/5 overflow-x-hidden",
+    "grid_system": "Control Room style: Dense, functional, separated by 1px solid borders. No soft dropshadows on cards. Everything is flat and structural.",
+    "padding": {
+      "screen_edge": "px-4 sm:px-6",
+      "section_y": "py-6 sm:py-8",
+      "card_inner": "p-4 sm:p-5"
+    }
+  },
+  "components": {
+    "top_story_hero": {
+      "layout": "Full width within the mobile container. Large image with a sharp 1px border. No soft gradient overlays, use a harsh bottom gradient if needed or place text strictly below the image.",
+      "typography": "Use h1_hero for the headline. Add a 'LIVE' or 'TOP STORY' mono badge in Signal Red (#FF3B30).",
+      "image_treatment": "Grayscale or high contrast. Max height 300px, object-cover."
+    },
+    "category_chips": {
+      "layout": "Horizontal scroll (hide scrollbar).",
+      "style": "Pill-shaped (rounded-full), px-4 py-1.5, text-sm font-medium.",
+      "states": {
+        "default": "bg-transparent border border-[#0A0A0A] text-[#0A0A0A]",
+        "active": "bg-[#0A0A0A] text-[#FFFFFF]",
+        "hover": "bg-[#E5E5E0]"
+      }
+    },
+    "article_card": {
+      "layout": "Vertical stack. No rounded corners (or max rounded-sm). Bottom border 1px solid #E5E5E0 to separate items in the feed.",
+      "metadata_strip": "Flex row, items-center, gap-2. Use mono font. Source dot color-coded by category.",
+      "title": "h3_article_title, margin-top: 4px, margin-bottom: 4px.",
+      "summary": "body_sm, line-clamp-3.",
+      "interaction": "Entire card is clickable. Active state bg changes slightly to #E5E5E0."
+    },
+    "bottom_tab_nav": {
+      "layout": "Fixed bottom, w-full max-w-md, flex justify-around items-center py-3 px-2 pb-safe.",
+      "style": "Glassmorphism: bg-white/80 backdrop-blur-xl border-t border-[#E5E5E0].",
+      "icons": "Use Phosphor Icons (Regular for inactive, Fill for active).",
+      "active_indicator": "A 4px dot under the icon in International Klein Blue (#0000FF)."
+    },
+    "stats_strip": {
+      "layout": "Sticky just below the header. Marquee or simple flex strip.",
+      "style": "bg-[#0A0A0A] text-[#FFFFFF] py-1.5 px-4 text-[10px] font-mono tracking-widest uppercase flex justify-between items-center",
+      "content": "Shows total sources, articles, and countdown to next fetch."
+    },
+    "pull_to_refresh": {
+      "style": "Mechanical feel. Use a mono text counter 'REFRESHING...' or an ASCII spinner instead of a generic circular spinner."
+    },
+    "search_overlay": {
+      "layout": "Full height sheet sliding up.",
+      "input": "Massive text input (text-3xl font-heading), border-b-2 border-[#0A0A0A], no outline, rounded-none bg-transparent."
+    }
+  },
+  "icons_and_assets": {
+    "icon_library": "@phosphor-icons/react",
+    "images": [
+      {
+        "category": "hero_top_story",
+        "url": "https://images.unsplash.com/photo-1737644467636-6b0053476bb2?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDQ2NDJ8MHwxfHNlYXJjaHwzfHxhaSUyMHJvYm90aWNzJTIwdGVjaG5vbG9neXxlbnwwfHx8fDE3ODE5ODI3NDZ8MA&ixlib=rb-4.1.0&q=85",
+        "description": "A white robot standing in front of a black background. Use for primary AI top story."
+      },
+      {
+        "category": "featured_research",
+        "url": "https://images.unsplash.com/photo-1644088379091-d574269d422f?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2NzV8MHwxfHNlYXJjaHwxfHxhYnN0cmFjdCUyMGRhdGElMjB2aXN1YWxpemF0aW9ufGVufDB8fHx8MTc4MTk4Mjc0Nnww&ixlib=rb-4.1.0&q=85",
+        "description": "Blue background with abstract data lines. Use for research paper section highlights."
+      },
+      {
+        "category": "community_news",
+        "url": "https://images.pexels.com/photos/10325707/pexels-photo-10325707.png?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+        "description": "Vibrant orange network lines. Use for community or newsletter category covers."
+      }
+    ]
+  },
+  "motion": {
+    "feed_stagger": "List items fade and slide up slightly (y: 10, opacity: 0) on mount, staggered by 0.05s.",
+    "sheet_slide": "Search and Filter sheets slide up from bottom (y: '100%' to '0%') with a spring stiffness of 300 and damping of 30.",
+    "button_tap": "Scale down slightly (scale: 0.97) on tap to feel tactile."
+  },
+  "accessibility_and_testing": {
+    "contrast": "Ensure all text meets APCA/WCAG AAA standards (Black on #F4F4F0 is extremely high contrast).",
+    "testing_attributes": "All interactive and key informational elements MUST include a data-testid attribute in kebab-case. Examples: data-testid='bottom-tab-feed', data-testid='article-card-0', data-testid='search-input'."
+  },
+  "instructions_to_main_agent": [
+    "Install @phosphor-icons/react for icons.",
+    "Implement the UI directly in HTML/Tailwind. Do NOT over-rely on Shadcn Card components for the feed, use raw divs with strict border-bottom rules to achieve the 'Control Room' editorial look.",
+    "Ensure fonts (Cabinet Grotesk, IBM Plex Sans, IBM Plex Mono) are imported via Google Fonts or Fontshare in index.css.",
+    "Make the app strictly a vertical mobile layout (max-w-md centered on desktop).",
+    "Include the stats strip marquee to show backend fetch status.",
+    "Ensure the data-testid attributes are faithfully applied to all clickable elements and main data containers for testing."
+  ]
+}
