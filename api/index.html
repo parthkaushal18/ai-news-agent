@@ -1,0 +1,1440 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>The Artificial Chronicle — AI News & Research Aggregator</title>
+  
+  <!-- Retro Print Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Playfair+Display:ital,wght@0,600;0,700;0,800;0,900;1,700&family=Special+Elite&family=Courier+Prime:wght@400;700&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      /* Ink & Paper Palette */
+      --bg-paper: #f6f1e5;     /* Warm Parchment */
+      --bg-paper-darker: #eae3d0;
+      --bg-paper-highlight: #fffdf9;
+      --ink-black: #161513;    /* Rich Charcoal Black */
+      --ink-faded: #4c4941;    /* Distressed Gray */
+      --ink-red: #8c2020;      /* Faded Burgundy stamp */
+      --border-ink: #161513;
+      --border-ink-thin: rgba(22, 21, 19, 0.15);
+      
+      /* Theme Fonts */
+      --font-masthead: 'Playfair Display', serif;
+      --font-headline: 'Playfair Display', serif;
+      --font-body: 'Lora', serif;
+      --font-typewriter: 'Special Elite', system-ui, monospace;
+      --font-mono: 'Courier Prime', monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: var(--font-body);
+      background-color: var(--bg-paper);
+      color: var(--ink-black);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+      line-height: 1.5;
+      padding: 0 1.5rem;
+      position: relative;
+    }
+
+    /* Print Texture Overlay effect */
+    body::before {
+      content: '';
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-image: radial-gradient(rgba(0, 0, 0, 0.015) 1px, transparent 0),
+                        radial-gradient(rgba(0, 0, 0, 0.01) 1.5px, transparent 0);
+      background-size: 8px 8px, 12px 12px;
+      pointer-events: none;
+      z-index: 9999;
+      opacity: 0.7;
+    }
+
+    /* Custom Scrollbar for Vintage feel */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+    ::-webkit-scrollbar-track {
+      background: var(--bg-paper-darker);
+      border-left: 1px solid var(--border-ink-thin);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: var(--ink-black);
+      border: 2px solid var(--bg-paper);
+      border-radius: 0;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: var(--ink-red);
+    }
+
+    /* Main Container */
+    .chronicle-wrapper {
+      max-width: 1200px;
+      margin: 0 auto;
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+
+    /* ── Newspaper Masthead ── */
+    .masthead {
+      margin-top: 1.5rem;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+
+    /* Classic Double Borders */
+    .masthead-borders {
+      border-top: 4px solid var(--ink-black);
+      border-bottom: 1.5px solid var(--ink-black);
+      padding: 0.35rem 0;
+      margin-top: 0.5rem;
+    }
+
+    .masthead-subtitle {
+      font-size: 0.8rem;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      font-weight: 700;
+      color: var(--ink-black);
+      font-family: var(--font-headline);
+    }
+
+    .masthead-title {
+      font-family: var(--font-masthead);
+      font-size: 3.75rem;
+      font-weight: 900;
+      letter-spacing: -0.03em;
+      text-transform: uppercase;
+      color: var(--ink-black);
+      line-height: 1.1;
+      padding: 0.75rem 0;
+      position: relative;
+      user-select: none;
+    }
+
+    /* Masthead details (date, price, issue) */
+    .masthead-details {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.4rem 0.5rem;
+      border-top: 1.5px solid var(--ink-black);
+      border-bottom: 4px solid var(--ink-black);
+      font-family: var(--font-typewriter);
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      color: var(--ink-black);
+      margin-bottom: 1.5rem;
+    }
+
+    .masthead-details-item {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .masthead-live-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      color: var(--ink-red);
+      font-weight: bold;
+    }
+
+    .masthead-live-dot {
+      width: 0.45rem;
+      height: 0.45rem;
+      background-color: var(--ink-red);
+      border-radius: 50%;
+      animation: ink-pulse 1.8s ease-in-out infinite;
+    }
+
+    @keyframes ink-pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.3; transform: scale(0.9); }
+    }
+
+    /* ── Typewriter Control Center ── */
+    .control-center {
+      background: var(--bg-paper-darker);
+      border: 1px solid var(--ink-black);
+      padding: 1rem;
+      margin-bottom: 1.5rem;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 1.5rem;
+      font-family: var(--font-typewriter);
+    }
+
+    .ledger-search {
+      flex: 1;
+      min-width: 280px;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      position: relative;
+    }
+
+    .ledger-search label {
+      font-weight: bold;
+      white-space: nowrap;
+      font-size: 0.8rem;
+    }
+
+    .ledger-search input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      border-bottom: 2px dotted var(--ink-black);
+      color: var(--ink-black);
+      font-family: var(--font-typewriter);
+      font-size: 0.875rem;
+      padding: 0.25rem 0.5rem;
+      outline: none;
+      transition: all 0.2s ease;
+    }
+
+    .ledger-search input:focus {
+      border-bottom-style: solid;
+      background: var(--bg-paper-highlight);
+    }
+
+    .ledger-search .search-clear {
+      position: absolute;
+      right: 0.5rem;
+      cursor: pointer;
+      color: var(--ink-red);
+      font-weight: bold;
+      display: none;
+    }
+
+    .ledger-actions {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-left: auto;
+    }
+
+    /* Print Buttons */
+    .print-btn {
+      background: var(--ink-black);
+      color: var(--bg-paper);
+      border: 1px solid var(--ink-black);
+      padding: 0.5rem 1rem;
+      font-family: var(--font-typewriter);
+      font-size: 0.8rem;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      transition: all 0.15s ease;
+      user-select: none;
+    }
+
+    .print-btn:hover {
+      background: var(--bg-paper);
+      color: var(--ink-black);
+    }
+
+    .print-btn:active {
+      transform: translateY(1px);
+    }
+
+    .print-btn-secondary {
+      background: transparent;
+      color: var(--ink-black);
+      border: 1px dashed var(--ink-black);
+    }
+
+    .print-btn-secondary:hover {
+      background: rgba(22, 21, 19, 0.05);
+      border-style: solid;
+    }
+
+    .print-btn-icon {
+      width: 0.85rem;
+      height: 0.85rem;
+      fill: currentColor;
+    }
+
+    /* ── Stats Bulletin Column ── */
+    .bulletin-board {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+      border-top: 1px solid var(--ink-black);
+      border-bottom: 1px solid var(--ink-black);
+      padding: 0.75rem 0;
+    }
+
+    .bulletin-card {
+      text-align: center;
+      border-right: 1px dashed var(--border-ink-thin);
+      padding: 0.25rem;
+    }
+
+    .bulletin-card:last-child {
+      border-right: none;
+    }
+
+    .bulletin-label {
+      font-family: var(--font-typewriter);
+      font-size: 0.65rem;
+      text-transform: uppercase;
+      color: var(--ink-faded);
+      margin-bottom: 0.2rem;
+    }
+
+    .bulletin-value {
+      font-family: var(--font-mono);
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: var(--ink-black);
+    }
+
+    /* ── Newspaper Columns Layout ── */
+    .columns-container {
+      display: flex;
+      flex: 1;
+      gap: 1.5rem;
+      margin-bottom: 2rem;
+      position: relative;
+    }
+
+    /* Left Column - Directories & Categories (Sidebar) */
+    .directory-sidebar {
+      width: 240px;
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+      border-right: 1px solid var(--ink-black);
+      padding-right: 1rem;
+    }
+
+    .directory-section-title {
+      font-family: var(--font-headline);
+      font-size: 0.85rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      border-bottom: 1px solid var(--ink-black);
+      padding-bottom: 0.25rem;
+      margin-bottom: 0.5rem;
+      color: var(--ink-black);
+      text-align: center;
+    }
+
+    .directory-menu {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 0.15rem;
+      font-family: var(--font-typewriter);
+    }
+
+    .directory-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.35rem 0.5rem;
+      font-size: 0.775rem;
+      cursor: pointer;
+      color: var(--ink-black);
+      transition: all 0.15s ease;
+      position: relative;
+    }
+
+    .directory-item:hover {
+      background: var(--bg-paper-darker);
+    }
+
+    /* Selected state stamped effect */
+    .directory-item.active {
+      font-weight: bold;
+      color: var(--ink-red);
+      background-image: radial-gradient(rgba(140, 32, 32, 0.03) 1px, transparent 0);
+      background-size: 4px 4px;
+      border: 1px dashed var(--ink-red);
+      border-radius: 4px;
+    }
+
+    .directory-item-left {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      min-width: 0;
+    }
+
+    .directory-dot {
+      width: 0.35rem;
+      height: 0.35rem;
+      border-radius: 50%;
+      background-color: var(--ink-black);
+      flex-shrink: 0;
+    }
+
+    .directory-item.active .directory-dot {
+      background-color: var(--ink-red);
+    }
+
+    .directory-name {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .directory-count {
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      color: var(--ink-faded);
+    }
+
+    .directory-item.active .directory-count {
+      color: var(--ink-red);
+    }
+
+    /* Right Column - Dispatches Feed (Main Column) */
+    .dispatches-feed {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+    }
+
+    /* Columns Toolbar */
+    .dispatches-toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1.5px solid var(--ink-black);
+      padding-bottom: 0.4rem;
+    }
+
+    .dispatch-title-area {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .dispatch-title {
+      font-family: var(--font-headline);
+      font-size: 1.15rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: -0.01em;
+    }
+
+    .dispatch-subtitle {
+      font-size: 0.725rem;
+      color: var(--ink-faded);
+      font-style: italic;
+    }
+
+    .print-layout-toggles {
+      display: flex;
+      align-items: center;
+      border: 1px solid var(--ink-black);
+    }
+
+    .layout-toggle-btn {
+      padding: 0.25rem 0.5rem;
+      background: transparent;
+      border: none;
+      color: var(--ink-faded);
+      cursor: pointer;
+      font-family: var(--font-typewriter);
+      font-size: 0.65rem;
+      text-transform: uppercase;
+      font-weight: bold;
+      transition: all 0.1s ease;
+      display: flex;
+      align-items: center;
+      gap: 0.25rem;
+    }
+
+    .layout-toggle-btn:first-child {
+      border-right: 1px solid var(--ink-black);
+    }
+
+    .layout-toggle-btn.active {
+      background: var(--ink-black);
+      color: var(--bg-paper);
+    }
+
+    .layout-toggle-icon {
+      width: 0.75rem;
+      height: 0.75rem;
+      fill: currentColor;
+    }
+
+    /* ── Newsprint Articles - GRID VIEW ── */
+    .articles-grid.grid-view {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 1.5rem;
+    }
+
+    /* ── Newsprint Articles - LIST VIEW ── */
+    .articles-grid.list-view {
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+    }
+
+    /* Article Card / Column */
+    .article-item {
+      background: var(--bg-paper-highlight);
+      border: 1px solid var(--ink-black);
+      padding: 1.25rem;
+      display: flex;
+      flex-direction: column;
+      text-decoration: none;
+      color: var(--ink-black);
+      transition: all 0.2s ease;
+      position: relative;
+      box-shadow: 2px 2px 0 var(--ink-black);
+    }
+
+    .articles-grid.list-view .article-item {
+      box-shadow: 3px 3px 0 var(--ink-black);
+      padding: 1.25rem 1.5rem;
+    }
+
+    .article-item:hover {
+      transform: translate(-1px, -1px);
+      box-shadow: 4px 4px 0 var(--ink-red);
+      border-color: var(--ink-red);
+    }
+
+    .article-item:active {
+      transform: translate(1px, 1px);
+      box-shadow: 1px 1px 0 var(--ink-black);
+    }
+
+    /* Highlight Search Match */
+    mark.highlight {
+      background: rgba(140, 32, 32, 0.12);
+      color: var(--ink-red);
+      font-weight: bold;
+      border-bottom: 1px dashed var(--ink-red);
+      padding: 0 1px;
+    }
+
+    /* Card Details */
+    .article-meta {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-family: var(--font-typewriter);
+      font-size: 0.65rem;
+      border-bottom: 1px solid var(--ink-black);
+      padding-bottom: 0.5rem;
+      margin-bottom: 0.75rem;
+      flex-wrap: wrap;
+    }
+
+    .article-source {
+      font-weight: bold;
+      color: var(--ink-black);
+      text-transform: uppercase;
+      letter-spacing: 0.02em;
+    }
+
+    .article-category {
+      font-style: italic;
+      color: var(--ink-red);
+    }
+
+    .article-date {
+      color: var(--ink-faded);
+      margin-left: auto;
+      font-family: var(--font-mono);
+      font-size: 0.65rem;
+    }
+
+    .article-headline {
+      font-family: var(--font-headline);
+      font-size: 1.1rem;
+      font-weight: 700;
+      line-height: 1.3;
+      margin-bottom: 0.6rem;
+      color: var(--ink-black);
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .article-item:hover .article-headline {
+      color: var(--ink-red);
+    }
+
+    /* Summary with Drop Caps */
+    .article-summary-wrapper {
+      font-family: var(--font-body);
+      font-size: 0.825rem;
+      color: var(--ink-faded);
+      line-height: 1.5;
+      text-align: justify;
+      display: -webkit-box;
+      -webkit-line-clamp: 3;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      flex: 1;
+    }
+
+    /* Drop-cap class */
+    .drop-cap::first-letter {
+      font-family: var(--font-headline);
+      font-size: 1.8rem;
+      float: left;
+      line-height: 1;
+      padding: 0.1rem 0.25rem 0 0;
+      font-weight: bold;
+      color: var(--ink-red);
+    }
+
+    .article-stamp {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 1rem;
+      padding-top: 0.4rem;
+      border-top: 1px dashed var(--border-ink-thin);
+      font-family: var(--font-typewriter);
+      font-size: 0.65rem;
+    }
+
+    .article-read-time {
+      color: var(--ink-faded);
+    }
+
+    .article-read-link {
+      font-weight: bold;
+      text-transform: uppercase;
+      color: var(--ink-black);
+      display: flex;
+      align-items: center;
+      gap: 0.15rem;
+    }
+
+    .article-item:hover .article-read-link {
+      color: var(--ink-red);
+    }
+
+    /* Dingbats / Column ends */
+    .columns-end-mark {
+      text-align: center;
+      font-size: 1.25rem;
+      color: var(--ink-faded);
+      padding: 2rem 0;
+      font-family: var(--font-headline);
+      user-select: none;
+    }
+
+    /* Empty Gazette / Connection Error States */
+    .gazette-empty {
+      border: 1px dashed var(--ink-black);
+      padding: 4rem 2rem;
+      text-align: center;
+      background: var(--bg-paper-highlight);
+      box-shadow: 2px 2px 0 var(--ink-black);
+    }
+
+    .gazette-empty-ornament {
+      font-size: 2rem;
+      color: var(--ink-red);
+      margin-bottom: 1rem;
+    }
+
+    .gazette-empty h3 {
+      font-family: var(--font-headline);
+      font-size: 1.35rem;
+      text-transform: uppercase;
+      margin-bottom: 0.5rem;
+    }
+
+    .gazette-empty p {
+      font-family: var(--font-body);
+      font-size: 0.85rem;
+      color: var(--ink-faded);
+      max-width: 420px;
+      margin: 0 auto 1.5rem;
+    }
+
+    /* ── Retro Ink Telegram System (Toast) ── */
+    .telegram-container {
+      position: fixed;
+      bottom: 2rem;
+      right: 2rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      z-index: 10000;
+    }
+
+    .telegram-strip {
+      background: #faf6eb;
+      border: 2px solid var(--ink-black);
+      color: var(--ink-black);
+      padding: 0.75rem 1.25rem;
+      font-family: var(--font-typewriter);
+      font-size: 0.75rem;
+      box-shadow: 4px 4px 0 var(--ink-black);
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      animation: telegram-slide 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+      min-width: 320px;
+      border-radius: 0;
+      position: relative;
+    }
+
+    /* Stamp header on telegram */
+    .telegram-strip::before {
+      content: 'TELEGRAM';
+      position: absolute;
+      top: -0.5rem;
+      left: 1rem;
+      background: var(--ink-black);
+      color: var(--bg-paper);
+      font-size: 0.55rem;
+      padding: 0.1rem 0.4rem;
+      font-weight: bold;
+    }
+
+    .telegram-strip.success {
+      border-color: var(--ink-red);
+      box-shadow: 4px 4px 0 var(--ink-red);
+    }
+
+    .telegram-icon {
+      font-size: 1.1rem;
+      color: var(--ink-black);
+    }
+
+    .telegram-strip.success .telegram-icon {
+      color: var(--ink-red);
+    }
+
+    @keyframes telegram-slide {
+      from {
+        transform: translateY(2rem) rotate(2deg);
+        opacity: 0;
+      }
+      to {
+        transform: translateY(0) rotate(0deg);
+        opacity: 1;
+      }
+    }
+
+    .telegram-strip.fade-out {
+      animation: telegram-dismiss 0.25s ease forwards;
+    }
+
+    @keyframes telegram-dismiss {
+      to {
+        opacity: 0;
+        transform: translateY(-1rem) scale(0.95);
+      }
+    }
+
+    /* ── Newspaper Shimmer Plate Loader ── */
+    .shimmer-plate {
+      background: var(--bg-paper-highlight);
+      border: 1px solid var(--ink-black);
+      padding: 1.25rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      min-height: 180px;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 2px 2px 0 var(--ink-black);
+    }
+
+    .shimmer-plate::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, 
+        transparent 0%, 
+        rgba(22, 21, 19, 0.04) 50%, 
+        transparent 100%
+      );
+      animation: ink-drying 1.6s infinite;
+      transform: translateX(-100%);
+    }
+
+    @keyframes ink-drying {
+      100% {
+        transform: translateX(100%);
+      }
+    }
+
+    .shimmer-block {
+      background: rgba(22, 21, 19, 0.06);
+      height: 0.7rem;
+    }
+
+    .shimmer-line-wide { width: 90%; }
+    .shimmer-line-medium { width: 65%; }
+    .shimmer-line-short { width: 40%; }
+
+    /* Responsive Newspaper Breaks */
+    @media (max-width: 768px) {
+      body {
+        padding: 0 1rem;
+      }
+
+      .masthead-title {
+        font-size: 2.5rem;
+      }
+
+      .bulletin-board {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .columns-container {
+        flex-direction: column;
+      }
+
+      .directory-sidebar {
+        width: 100%;
+        border-right: none;
+        border-bottom: 2px double var(--ink-black);
+        padding-right: 0;
+        padding-bottom: 1.5rem;
+      }
+
+      .articles-grid.grid-view {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .masthead-title {
+        font-size: 1.85rem;
+      }
+      .masthead-details {
+        flex-direction: column;
+        gap: 0.25rem;
+      }
+      .bulletin-board {
+        grid-template-columns: 1fr;
+      }
+      .control-center {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      .ledger-actions {
+        margin-left: 0;
+        justify-content: flex-end;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="chronicle-wrapper">
+    
+    <!-- Masthead Section -->
+    <header class="masthead">
+      <div class="masthead-borders">
+        <span class="masthead-subtitle">AN AUTONOMOUS RECORD OF ARTIFICIAL INTELLIGENCE & RESEARCH</span>
+      </div>
+      
+      <h1 class="masthead-title" onclick="clearAllFilters()">THE ARTIFICIAL CHRONICLE</h1>
+      
+      <div class="masthead-details">
+        <div class="masthead-details-item">
+          <span>VOL. I &mdash; NO. 12</span>
+        </div>
+        <div class="masthead-details-item">
+          <span id="masthead-date">DATE: &mdash;</span>
+        </div>
+        <div class="masthead-details-item">
+          <span>PRICE: 10 CENTS</span>
+        </div>
+        <div class="masthead-details-item masthead-live-badge">
+          <span class="masthead-live-dot"></span>
+          <span>AGENT STATUS: ACTIVE</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- Ledger Controls -->
+    <section class="control-center">
+      <div class="ledger-search">
+        <label for="q">SEARCH ARCHIVES &middot;</label>
+        <input id="q" type="text" placeholder="Type keywords here..." oninput="handleSearchInput()" />
+        <span class="search-clear" id="search-clear-btn" onclick="clearSearch()">&times;</span>
+      </div>
+      
+      <div class="ledger-actions">
+        <button class="print-btn" id="refresh-btn" onclick="requestDispatchRefresh()">
+          <svg class="print-btn-icon" viewBox="0 0 24 24" id="refresh-icon">
+            <path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/>
+          </svg>
+          <span>FETCH NEWS</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- Bulletin Statistics -->
+    <section class="bulletin-board">
+      <div class="bulletin-card">
+        <div class="bulletin-label">TOTAL DISPATCHES</div>
+        <div class="bulletin-value" id="s-total">&mdash;</div>
+      </div>
+      
+      <div class="bulletin-card">
+        <div class="bulletin-label">CURATED SOURCES</div>
+        <div class="bulletin-value" id="s-src">&mdash;</div>
+      </div>
+
+      <div class="bulletin-card">
+        <div class="bulletin-label">LAST PRESS RUN</div>
+        <div class="bulletin-value" id="s-updated">&mdash;</div>
+      </div>
+
+      <div class="bulletin-card">
+        <div class="bulletin-label">NEXT PRESS RUN</div>
+        <div class="bulletin-value" id="s-next">&mdash;</div>
+      </div>
+    </section>
+
+    <!-- Main Newspaper Grid -->
+    <div class="columns-container">
+      
+      <!-- Left Column Sidebar -->
+      <aside class="directory-sidebar">
+        <div>
+          <h3 class="directory-section-title">DEPARTMENTS</h3>
+          <ul class="directory-menu" id="cat-list">
+            <li class="directory-item active" onclick="setCategory(null)">
+              <div class="directory-item-left">
+                <span class="directory-name">All Departments</span>
+              </div>
+              <span class="directory-count" id="all-cat-count">&mdash;</span>
+            </li>
+          </ul>
+        </div>
+
+        <div>
+          <h3 class="directory-section-title">CORRESPONDENTS</h3>
+          <ul class="directory-menu" id="src-list">
+            <li class="directory-item active" onclick="setSource(null)">
+              <div class="directory-item-left">
+                <span class="directory-name">All Correspondents</span>
+              </div>
+              <span class="directory-count" id="all-src-count">&mdash;</span>
+            </li>
+          </ul>
+        </div>
+      </aside>
+
+      <!-- Right Feed Column -->
+      <main class="dispatches-feed">
+        
+        <!-- Toolbar -->
+        <div class="dispatches-toolbar">
+          <div class="dispatch-title-area">
+            <h2 class="dispatch-title" id="dispatch-title">LATEST DISPATCHES</h2>
+            <span class="dispatch-subtitle" id="dispatch-subtitle">Verified dispatches from global intelligence networks</span>
+          </div>
+
+          <div class="print-layout-toggles">
+            <button class="layout-toggle-btn active" id="view-grid" onclick="setLayout('grid')" title="Multi-column Layout">
+              <span>Grid View</span>
+            </button>
+            <button class="layout-toggle-btn" id="view-list" onclick="setLayout('list')" title="Single Scroll Layout">
+              <span>List View</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Feed Container -->
+        <div class="articles-grid grid-view" id="cards-container">
+          <!-- Ink drying placeholder plates -->
+          <div class="shimmer-plate">
+            <div class="shimmer-block shimmer-line-short" style="margin-bottom: 0.5rem;"></div>
+            <div class="shimmer-block shimmer-line-wide" style="height: 1.15rem; margin-bottom: 0.5rem;"></div>
+            <div class="shimmer-block shimmer-line-wide"></div>
+            <div class="shimmer-block shimmer-line-medium"></div>
+          </div>
+          <div class="shimmer-plate">
+            <div class="shimmer-block shimmer-line-short" style="margin-bottom: 0.5rem;"></div>
+            <div class="shimmer-block shimmer-line-wide" style="height: 1.15rem; margin-bottom: 0.5rem;"></div>
+            <div class="shimmer-block shimmer-line-wide"></div>
+            <div class="shimmer-block shimmer-line-medium"></div>
+          </div>
+        </div>
+
+        <div class="columns-end-mark">&mdash; &nbsp; ❖ &nbsp; &mdash;</div>
+      </main>
+    </div>
+  </div>
+
+  <!-- Telegram Toast Overlay -->
+  <div class="telegram-container" id="telegram-container"></div>
+
+  <script>
+    // Visual category coloring and mappings
+    let dispatchesDb = [];
+    let activeCategory = null;
+    let activeSource = null;
+    let currentLayout = 'grid';
+    let lastDispatchTimestamp = 0;
+
+    // Toast Manager (Vintage telegram style)
+    function notifyTelegram(text, type = 'info', delay = 4500) {
+      const container = document.getElementById('telegram-container');
+      const telegram = document.createElement('div');
+      telegram.className = `telegram-strip ${type === 'success' ? 'success' : ''}`;
+      
+      const dot = `<span class="telegram-icon">&bull;</span>`;
+      telegram.innerHTML = `
+        ${dot}
+        <span>${text}</span>
+      `;
+      container.appendChild(telegram);
+
+      setTimeout(() => {
+        telegram.classList.add('fade-out');
+        telegram.addEventListener('animationend', () => {
+          telegram.remove();
+        });
+      }, delay);
+    }
+
+    // Escape character entities safely
+    function esc(s) {
+      return (s || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    // Highlight query text
+    function highlightQuery(text, query) {
+      if (!query) return esc(text);
+      const escaped = query.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+      const regex = new RegExp(`(${escaped})`, 'gi');
+      return esc(text).replace(regex, '<mark class="highlight">$1</mark>');
+    }
+
+    // Vintage Print format time difference
+    function timeAgoLabel(iso) {
+      if (!iso) return '';
+      try {
+        const dateObj = new Date(iso);
+        const secs = (Date.now() - dateObj) / 1000;
+        
+        if (secs < 60) return 'JUST IN';
+        if (secs < 3600) return `${Math.floor(secs / 60)} MINS AGO`;
+        if (secs < 86400) return `${Math.floor(secs / 3600)} HRS AGO`;
+        if (secs < 604800) return `${Math.floor(secs / 86400)} DAYS AGO`;
+        
+        return dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }).toUpperCase();
+      } catch (e) {
+        return '';
+      }
+    }
+
+    // Estimates read times for articles
+    function calculateReadDuration(summary) {
+      if (!summary) return '1 MIN READ';
+      const wordCount = summary.split(/\s+/).length;
+      const readMins = Math.ceil(wordCount / 180);
+      return `${readMins} MIN READ`;
+    }
+
+    // Generate Article Card HTML
+    function buildArticleItemHTML(art, query = '') {
+      const timeStr = timeAgoLabel(art.published);
+      const readTimeStr = calculateReadDuration(art.title + ' ' + (art.summary || ''));
+      
+      const headlineHighlighted = highlightQuery(art.title, query);
+      
+      // Clean and highlight summary, then add drop-cap
+      let summaryContent = '';
+      if (art.summary) {
+        const cleanSum = highlightQuery(art.summary, query);
+        summaryContent = `<div class="article-summary-wrapper drop-cap">${cleanSum}</div>`;
+      }
+      
+      return `
+        <a href="${esc(art.url)}" target="_blank" rel="noopener" class="article-item">
+          <div class="article-meta">
+            <span class="article-source">${esc(art.source)}</span>
+            <span>&middot;</span>
+            <span class="article-category">${esc(art.category)}</span>
+            <span class="article-date" title="${new Date(art.published).toLocaleString()}">${timeStr}</span>
+          </div>
+
+          <h3 class="article-headline">${headlineHighlighted}</h3>
+          ${summaryContent}
+
+          <div class="article-stamp">
+            <span class="article-read-time">${readTimeStr}</span>
+            <span class="article-read-link">
+              <span>Read Dispatch</span>
+              <span style="font-size: 0.85rem;">&rarr;</span>
+            </span>
+          </div>
+        </a>
+      `;
+    }
+
+    // Toggles between grid and list layouts
+    function setLayout(mode) {
+      currentLayout = mode;
+      document.getElementById('view-grid').classList.toggle('active', mode === 'grid');
+      document.getElementById('view-list').classList.toggle('active', mode === 'list');
+      
+      const cardsGrid = document.getElementById('cards-container');
+      cardsGrid.className = `articles-grid ${mode}-view`;
+      filterDispatches();
+    }
+
+    // Clears all filters completely
+    function clearAllFilters() {
+      activeCategory = null;
+      activeSource = null;
+      document.getElementById('q').value = '';
+      document.getElementById('search-clear-btn').style.display = 'none';
+      
+      // Reset sidebar lists selections
+      document.querySelectorAll('#cat-list .directory-item').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('#src-list .directory-item').forEach(el => el.classList.remove('active'));
+      document.querySelector('#cat-list .directory-item:first-child').classList.add('active');
+      document.querySelector('#src-list .directory-item:first-child').classList.add('active');
+      
+      filterDispatches();
+      notifyTelegram('Chronicle records re-set', 'info');
+    }
+
+    // Builds sidebars lists
+    function renderSidebarFilters() {
+      const categoryCounts = {};
+      const sourceCounts = {};
+      
+      dispatchesDb.forEach(art => {
+        categoryCounts[art.category] = (categoryCounts[art.category] || 0) + 1;
+        sourceCounts[art.source] = (sourceCounts[art.source] || 0) + 1;
+      });
+
+      // Update generic category counts
+      document.getElementById('all-cat-count').textContent = dispatchesDb.length;
+      document.getElementById('all-src-count').textContent = dispatchesDb.length;
+
+      // Category Sidebar Builder
+      const catList = document.getElementById('cat-list');
+      const defaultCatItem = catList.firstElementChild;
+      catList.innerHTML = '';
+      catList.appendChild(defaultCatItem);
+
+      Object.entries(categoryCounts).sort((a,b) => b[1] - a[1]).forEach(([cat, num]) => {
+        const li = document.createElement('li');
+        li.className = `directory-item ${activeCategory === cat ? 'active' : ''}`;
+        li.onclick = () => setCategory(cat);
+        li.innerHTML = `
+          <div class="directory-item-left">
+            <span class="directory-dot"></span>
+            <span class="directory-name">${esc(cat)}</span>
+          </div>
+          <span class="directory-count">${num}</span>
+        `;
+        catList.appendChild(li);
+      });
+
+      // Source Sidebar Builder
+      const srcList = document.getElementById('src-list');
+      const defaultSrcItem = srcList.firstElementChild;
+      srcList.innerHTML = '';
+      srcList.appendChild(defaultSrcItem);
+
+      Object.entries(sourceCounts).sort((a,b) => b[1] - a[1]).forEach(([src, num]) => {
+        const li = document.createElement('li');
+        li.className = `directory-item ${activeSource === src ? 'active' : ''}`;
+        li.onclick = () => setSource(src);
+        li.innerHTML = `
+          <div class="directory-item-left">
+            <span class="directory-dot"></span>
+            <span class="directory-name">${esc(src)}</span>
+          </div>
+          <span class="directory-count">${num}</span>
+        `;
+        srcList.appendChild(li);
+      });
+    }
+
+    // Set Filters
+    function setCategory(cat) {
+      activeCategory = cat;
+      activeSource = null; // Mutually exclusive to prevent empty lists
+      
+      document.querySelectorAll('#cat-list .directory-item').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('#src-list .directory-item').forEach(el => el.classList.remove('active'));
+      
+      const items = document.querySelectorAll('#cat-list .directory-item');
+      if (cat === null) {
+        items[0].classList.add('active');
+        document.querySelector('#src-list .directory-item:first-child').classList.add('active');
+      } else {
+        Array.from(items).forEach(item => {
+          if (item.querySelector('.directory-name')?.textContent === cat) {
+            item.classList.add('active');
+          }
+        });
+        document.querySelector('#src-list .directory-item:first-child').classList.add('active');
+      }
+
+      filterDispatches();
+    }
+
+    function setSource(src) {
+      activeSource = src;
+      activeCategory = null; // Mutually exclusive
+      
+      document.querySelectorAll('#cat-list .directory-item').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('#src-list .directory-item').forEach(el => el.classList.remove('active'));
+      
+      const items = document.querySelectorAll('#src-list .directory-item');
+      if (src === null) {
+        items[0].classList.add('active');
+        document.querySelector('#cat-list .directory-item:first-child').classList.add('active');
+      } else {
+        Array.from(items).forEach(item => {
+          if (item.querySelector('.directory-name')?.textContent === src) {
+            item.classList.add('active');
+          }
+        });
+        document.querySelector('#cat-list .directory-item:first-child').classList.add('active');
+      }
+
+      filterDispatches();
+    }
+
+    // Handle interactive search inputs
+    function handleSearchInput() {
+      const qVal = document.getElementById('q').value;
+      document.getElementById('search-clear-btn').style.display = qVal ? 'block' : 'none';
+      filterDispatches();
+    }
+
+    // Clear search helper
+    function clearSearch() {
+      document.getElementById('q').value = '';
+      document.getElementById('search-clear-btn').style.display = 'none';
+      filterDispatches();
+    }
+
+    // Filtering Core
+    function filterDispatches() {
+      const qText = (document.getElementById('q').value || '').toLowerCase().trim();
+      let dispatches = dispatchesDb;
+
+      if (activeCategory) {
+        dispatches = dispatches.filter(a => a.category === activeCategory);
+      }
+      if (activeSource) {
+        dispatches = dispatches.filter(a => a.source === activeSource);
+      }
+      if (qText) {
+        dispatches = dispatches.filter(a => 
+          (a.title || '').toLowerCase().includes(qText) || 
+          (a.summary || '').toLowerCase().includes(qText) || 
+          (a.source || '').toLowerCase().includes(qText)
+        );
+      }
+
+      // Title & sub-text headers updates
+      const mainTitle = document.getElementById('dispatch-title');
+      const mainSub = document.getElementById('dispatch-subtitle');
+
+      if (activeCategory) {
+        mainTitle.textContent = `${activeCategory} Dispatches`;
+        mainSub.textContent = `Displaying ${dispatches.length} documents indexed under Category: ${activeCategory}`;
+      } else if (activeSource) {
+        mainTitle.textContent = `Dispatches from ${activeSource}`;
+        mainSub.textContent = `Displaying ${dispatches.length} items filed by correspondent: ${activeSource}`;
+      } else if (qText) {
+        mainTitle.textContent = `Search Index Results`;
+        mainSub.textContent = `Found ${dispatches.length} dispatches matching search terms "${qText}"`;
+      } else {
+        mainTitle.textContent = 'LATEST DISPATCHES';
+        mainSub.textContent = 'Verified dispatches from global intelligence networks';
+      }
+
+      const container = document.getElementById('cards-container');
+      if (dispatches.length === 0) {
+        container.innerHTML = `
+          <div class="gazette-empty">
+            <div class="gazette-empty-ornament">❦</div>
+            <h3>No Dispatches Found</h3>
+            <p>Your lookup request produced no records. Clear filter settings or instruct the printing presses to fetch news updates.</p>
+            <button class="print-btn print-btn-secondary" onclick="clearAllFilters()">CLEAR FILTERS</button>
+          </div>
+        `;
+      } else {
+        container.innerHTML = dispatches.map(a => buildArticleItemHTML(a, qText)).join('');
+      }
+    }
+
+    // Pull database contents
+    async function syncLedgerData() {
+      try {
+        const resp = await fetch('/news?limit=120');
+        const data = await resp.json();
+        dispatchesDb = data.articles || [];
+        
+        // Update stats
+        const uniqueSrc = new Set(dispatchesDb.map(a => a.source)).size;
+        document.getElementById('s-total').textContent = dispatchesDb.length;
+        document.getElementById('s-src').textContent = uniqueSrc;
+        
+        if (data.last_fetch) {
+          document.getElementById('s-updated').textContent = timeAgoLabel(data.last_fetch);
+          lastDispatchTimestamp = new Date(data.last_fetch).getTime();
+        } else {
+          document.getElementById('s-updated').textContent = 'NEVER';
+        }
+
+        renderSidebarFilters();
+        filterDispatches();
+      } catch (err) {
+        console.error(err);
+        notifyTelegram('ERROR: Could not sync latest dispatch ledger', 'error');
+        document.getElementById('cards-container').innerHTML = `
+          <div class="gazette-empty" style="border-color: var(--ink-red);">
+            <div class="gazette-empty-ornament" style="color: var(--ink-red);">✦</div>
+            <h3 style="color: var(--ink-red);">Telegraph Connection Terminated</h3>
+            <p>Cannot establish connection with the central news archive. Ensure the FastAPI agent daemon is running locally.</p>
+            <button class="print-btn" onclick="syncLedgerData()">RETRY CONNECTION</button>
+          </div>
+        `;
+      }
+    }
+
+    // Trigger sync dispatch fetches manually
+    async function requestDispatchRefresh() {
+      const btn = document.getElementById('refresh-btn');
+      const icon = document.getElementById('refresh-icon');
+      
+      btn.disabled = true;
+      icon.style.animation = 'ink-press 1s linear infinite';
+      
+      // Inline styling injector for ink pressing
+      const style = document.createElement('style');
+      style.id = 'ink-press-styles';
+      style.innerHTML = '@keyframes ink-press { 100% { transform: rotate(360deg); } }';
+      document.head.appendChild(style);
+
+      notifyTelegram('TELEGRAM SENT: Dispatching agent to scan news feeds...', 'info');
+
+      try {
+        await fetch('/refresh', { method: 'POST' });
+        notifyTelegram('TELEGRAM RECEIVED: Refresh done, rebuilding chronicle...', 'success');
+        
+        setTimeout(async () => {
+          await syncLedgerData();
+          btn.disabled = false;
+          icon.style.animation = '';
+          const styleEl = document.getElementById('ink-press-styles');
+          if (styleEl) styleEl.remove();
+        }, 1500);
+
+      } catch (err) {
+        console.error(err);
+        notifyTelegram('TELEGRAM RECEIVED: Feed refresh operation failed', 'error');
+        btn.disabled = false;
+        icon.style.animation = '';
+        const styleEl = document.getElementById('ink-press-styles');
+        if (styleEl) styleEl.remove();
+      }
+    }
+
+    // Live Auto-Refresh Tickers
+    async function checkHealthTicker() {
+      try {
+        const resp = await fetch('/health');
+        const h = await resp.json();
+        const nextFetchIn = h.next_fetch_in || 0;
+        
+        const m = String(Math.floor(nextFetchIn / 60)).padStart(2, '0');
+        const s = String(nextFetchIn % 60).padStart(2, '0');
+        document.getElementById('s-next').textContent = `${m}:${s}`;
+        
+        if (nextFetchIn === 1800 || nextFetchIn === 0) {
+          syncLedgerData();
+        }
+      } catch {
+        if (lastDispatchTimestamp > 0) {
+          const passed = Math.floor((Date.now() - lastDispatchTimestamp) / 1000);
+          const nextFetchIn = Math.max(0, 1800 - passed);
+          
+          const m = String(Math.floor(nextFetchIn / 60)).padStart(2, '0');
+          const s = String(nextFetchIn % 60).padStart(2, '0');
+          document.getElementById('s-next').textContent = `${m}:${s}`;
+        }
+      }
+    }
+
+    // Set date string in Masthead details
+    function setMastheadDate() {
+      const today = new Date();
+      const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+      document.getElementById('masthead-date').textContent = `LONDON, ${today.toLocaleDateString('en-US', options).toUpperCase()}`;
+    }
+
+    // Keyboard controls support (Press '/' key to search)
+    window.addEventListener('keydown', (e) => {
+      if (e.key === '/' && document.activeElement !== document.getElementById('q')) {
+        e.preventDefault();
+        const searchInput = document.getElementById('q');
+        searchInput.focus();
+        searchInput.select();
+      }
+    });
+
+    // Run Initializers
+    setMastheadDate();
+    syncLedgerData();
+    // Re-check archives every 5 mins
+    setInterval(syncLedgerData, 5 * 60 * 1000);
+    // Count down timers
+    setInterval(checkHealthTicker, 1000);
+    checkHealthTicker();
+  </script>
+</body>
+</html>
