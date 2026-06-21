@@ -1,0 +1,29 @@
+{
+  "summary": "Full regression + new-UI testing on SYNAPSE after major frontend redesign. Backend: 8/8 pytest tests still pass (health, news, category/source/search filters, HN source, sources payload with counts, refresh). Frontend (414x896 mobile viewport): splash boot screen renders with new bar-logo, SYN·APSE wordmark, AI NEWS TERMINAL · V1.0, klein-blue progress bar and all 4 boot lines (POWER ON, AGENT INIT, FEED SYNC, 12 SOURCES) — slides up after ~2s and reveals home. Header shows new Logo + SYN·APSE wordmark; stats-strip animated counters (95 STORIES, 12 SOURCES, NEXT countdown, LIVE) render; source marquee ticker animates with [count] brackets; chip-all + chip-cat-N click with sliding active pill via layoutId='chip-bg'; HeroStory renders TOP STORY with image, LIVE badge, ISS·001 issue badge, category badge, shutter reveal. Article cards display reading time '1 MIN' next to READ and bookmark toggle works (verified by saving 2 articles, switching to Saved tab, seeing saved-card-0/1 and 'Counter value=2', then unsaving both shows 'Nothing saved yet' empty state). Trending tab renders ranked 01/02/03/04 cards with data-testid='trending-card-N'. Bottom-tab navigation has klein-blue underline (nav .bg-klein) that slides between tabs via layoutId='tab-indicator'. Scroll-reset verified: scrolled Feed to top=2000, switched to Trending → scrollTop became 0. Search sheet opens with 'LLM' query returning hits + search-result-N. Filters sheet opens, selecting source-1 shows klein-blue 'FILTERING · X' banner, CLEAR action works. Refresh button triggers POST /api/refresh. Critical layout fix verified: app-shell box stays exactly 414x896 (was reported to grow to ~18000px before fix) — no overflow bug. No critical issues.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": ["/app/backend/tests/test_news_api.py", "/app/test_reports/pytest/pytest_results.xml"],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "frontend/src/App.js is ~587 lines — borderline; consider extracting FeedScreen/TrendingScreen/SavedScreen and atoms (Chip/Section/LoadingState/EmptyState/Footer) to dedicated files. Same recommendation as iteration_1.",
+    "frontend/src/App.js onRefresh: still uses fixed setTimeout(4000) + setTimeout(14000). A small UX issue if fetch finishes faster — consider polling /api/health.fetch_count instead.",
+    "frontend/src/App.js useSaved: persists saved ids without cleaning up ids that no longer exist in the article store; stale ids accumulate over time. Cosmetic.",
+    "backend/server.py: per-feed timeout still not set; if one RSS feed is slow the background fetch can block. Not regressing in this iteration.",
+    "frontend/src/components/Splash.js (per request, uses ref to bypass parent re-renders): verified — splash detaches cleanly after ~2s. No leaks observed."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "100% (8/8 pytest)", "frontend": "100% (splash, header, stats-strip, marquee, chips with layoutId, hero shutter, article cards w/ reading-time + bookmark scale, trending ranked 01/02/03+, tab-indicator underline, scroll-reset on tab change, search sheet, filters sheet w/ banner+clear, app-shell viewport-bound)"},
+  "test_credentials": "N/A — app has no authentication",
+  "seed_data_creation": "None — backend auto-fetches live RSS/HN/arXiv data",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "All redesign elements work as advertised. The earlier app-shell overflow bug (min-h-[100dvh] growing to ~18000px) is fixed — verified box.height=896px on 414x896 viewport. Backend cache had 95 articles at test time, fetch_count incrementing normally. Hacker News count is positive (4+ trending cards rendered). data-testids documented in the request are all present and working: splash-screen, app-shell, top-filters-btn, top-refresh-btn, stats-strip, bottom-tab-(feed|trending|search|saved), chip-all, chip-cat-N, clear-src-filter, hero-top-story, article-card-N + article-card-N-link + article-card-N-save, trending-card-N, saved-card-N, search-sheet, search-input, search-close-btn, search-result-N, filters-sheet, filter-source-N, filters-close-btn. Splash takes ~2-2.3s to detach — always wait_for_selector('[data-testid=\"splash-screen\"]', state='detached', timeout=8000) before interacting. AnimatePresence between tabs uses mode='wait' (~250-500ms transition) — give 600-1000ms after tab clicks.",
+  "rca of the issue": "No issues identified in this iteration."
+}

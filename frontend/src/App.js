@@ -1,17 +1,20 @@
 import React, { useEffect, useMemo, useState, useCallback } from "react";
 import axios from "axios";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   ArrowsClockwise,
-  Lightning,
   Newspaper,
   TrendUp,
   MagnifyingGlass,
   BookmarkSimple,
   Funnel,
+  Sparkle,
 } from "@phosphor-icons/react";
 
 import { CAT_COLORS, formatCountdown } from "./constants";
+import Logo from "./components/Logo";
+import Splash from "./components/Splash";
+import Counter from "./components/Counter";
 import ArticleCard from "./components/ArticleCard";
 import HeroStory from "./components/HeroStory";
 import SearchSheet from "./components/SearchSheet";
@@ -20,13 +23,7 @@ import FiltersSheet from "./components/FiltersSheet";
 const BACKEND = process.env.REACT_APP_BACKEND_URL || "";
 const API = `${BACKEND}/api`;
 
-const TAB_ICONS = {
-  feed: Newspaper,
-  trending: TrendUp,
-  search: MagnifyingGlass,
-  saved: BookmarkSimple,
-};
-
+const TAB_ICONS = { feed: Newspaper, trending: TrendUp, search: MagnifyingGlass, saved: BookmarkSimple };
 const TABS = [
   { id: "feed", label: "Feed" },
   { id: "trending", label: "Trending" },
@@ -36,15 +33,11 @@ const TABS = [
 
 function useSaved() {
   const [saved, setSaved] = useState(() => {
-    try {
-      return JSON.parse(localStorage.getItem("ai-news:saved") || "[]");
-    } catch {
-      return [];
-    }
+    try { return JSON.parse(localStorage.getItem("ai-news:saved") || "[]"); } catch { return []; }
   });
   const toggle = useCallback((id) => {
-    setSaved((prev) => {
-      const next = prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id];
+    setSaved((p) => {
+      const next = p.includes(id) ? p.filter((x) => x !== id) : [...p, id];
       localStorage.setItem("ai-news:saved", JSON.stringify(next));
       return next;
     });
@@ -66,9 +59,11 @@ export default function App() {
   const [tab, setTab] = useState("feed");
   const [searchOpen, setSearchOpen] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [splashDone, setSplashDone] = useState(false);
 
   const [saved, toggleSave] = useSaved();
   const [countdown, setCountdown] = useState(0);
+  const mainRef = React.useRef(null);
 
   const loadAll = useCallback(async () => {
     try {
@@ -84,7 +79,6 @@ export default function App() {
       setCountdown(healthRes.data.next_fetch_in || 0);
       setError(null);
     } catch (e) {
-      console.error("load error", e);
       setError(e.message || "Could not reach the news agent");
     } finally {
       setLoading(false);
@@ -106,19 +100,11 @@ export default function App() {
     setRefreshing(true);
     try {
       await axios.post(`${API}/refresh`);
-      // Poll a couple of times to give fetch a chance to complete
       setTimeout(loadAll, 4000);
-      setTimeout(() => {
-        loadAll();
-        setRefreshing(false);
-      }, 15000);
-    } catch (e) {
-      console.error(e);
-      setRefreshing(false);
-    }
+      setTimeout(() => { loadAll(); setRefreshing(false); }, 14000);
+    } catch { setRefreshing(false); }
   };
 
-  // Apply filters
   const filtered = useMemo(() => {
     let items = articles;
     if (activeCat) items = items.filter((a) => a.category === activeCat);
@@ -126,58 +112,46 @@ export default function App() {
     return items;
   }, [articles, activeCat, activeSrc]);
 
-  // Hero = first item in current filter
   const hero = filtered[0];
   const restOfFeed = filtered.slice(1);
 
-  // Trending: top 20 articles from Hacker News + Community, sorted by published desc
-  const trending = useMemo(() => {
-    return articles
-      .filter((a) => a.source === "Hacker News" || a.category === "Community")
-      .slice(0, 20);
-  }, [articles]);
+  const trending = useMemo(
+    () => articles.filter((a) => a.source === "Hacker News" || a.category === "Community").slice(0, 20),
+    [articles]
+  );
 
   const savedArticles = useMemo(
     () => articles.filter((a) => saved.includes(a.id)),
     [articles, saved]
   );
 
-  // Switch tab — pre-open relevant sheets
-  useEffect(() => {
-    if (tab === "search") setSearchOpen(true);
-  }, [tab]);
-
   const onTab = (id) => {
-    if (id === "search") {
-      setSearchOpen(true);
-      return;
-    }
+    if (id === "search") { setSearchOpen(true); return; }
     setTab(id);
+    // Reset scroll on tab change so users always start at top
+    requestAnimationFrame(() => mainRef.current?.scrollTo({ top: 0, behavior: "smooth" }));
   };
-
-  const closeSearch = () => {
-    setSearchOpen(false);
-    if (tab === "search") setTab("feed");
-  };
+  const closeSearch = () => { setSearchOpen(false); if (tab === "search") setTab("feed"); };
 
   return (
-    <div className="min-h-[100dvh] bg-ink flex justify-center">
-      {/* Phone-frame container — full bleed on mobile, framed on desktop */}
+    <div className="h-[100dvh] bg-ink flex justify-center overflow-hidden">
       <div
-        className="relative app-shell w-full max-w-md min-h-[100dvh] bg-paper overflow-hidden flex flex-col grain"
+        className="relative app-shell w-full max-w-md h-full bg-paper overflow-hidden flex flex-col grain"
         data-testid="app-shell"
       >
+        {/* ── Splash ── */}
+        {!splashDone && <Splash onDone={() => setSplashDone(true)} />}
+
         {/* ── Top Bar ── */}
         <header className="relative z-10 flex items-center gap-3 px-5 pt-5 pb-3 border-b border-ink bg-paper">
-          <div className="flex items-center gap-2">
-            <div className="relative w-7 h-7 bg-ink flex items-center justify-center">
-              <Lightning size={14} weight="fill" className="text-klein" />
-              <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-signal animate-pulse" />
-            </div>
-            <div className="leading-none">
-              <p className="font-heading font-black text-[18px] tracking-[-0.02em] text-ink">SYNAPSE</p>
-              <p className="font-mono text-[8.5px] uppercase tracking-[0.22em] text-muted mt-0.5">AI NEWS TERMINAL</p>
-            </div>
+          <Logo size={32} />
+          <div className="leading-none">
+            <p className="font-heading font-black text-[18px] tracking-[-0.03em] text-ink">
+              SYN<span className="text-klein">·</span>APSE
+            </p>
+            <p className="font-mono text-[8.5px] uppercase tracking-[0.22em] text-muted mt-0.5">
+              AI NEWS TERMINAL
+            </p>
           </div>
 
           <div className="ml-auto flex items-center gap-1">
@@ -202,47 +176,76 @@ export default function App() {
           </div>
         </header>
 
-        {/* ── Stats Strip ── */}
+        {/* ── Stats Strip (animated counters + marquee on the right) ── */}
         <div
-          className="relative z-10 bg-ink text-paper px-5 py-1.5 flex items-center gap-4 font-mono text-[10px] uppercase tracking-[0.16em] overflow-hidden"
+          className="relative z-10 bg-ink text-paper px-5 py-1.5 flex items-center gap-3 font-mono text-[10px] uppercase tracking-[0.16em] overflow-hidden"
           data-testid="stats-strip"
         >
-          <span><b className="text-amber">{articles.length}</b>&nbsp;stories</span>
-          <span className="text-bone/40">·</span>
-          <span><b className="text-amber">{health?.sources ?? "—"}</b>&nbsp;sources</span>
-          <span className="text-bone/40">·</span>
-          <span>NEXT&nbsp;<b className="text-amber">{formatCountdown(countdown)}</b></span>
+          <span><b className="text-amber"><Counter value={articles.length} /></b>&nbsp;STORIES</span>
+          <span className="text-bone/30">·</span>
+          <span><b className="text-amber"><Counter value={health?.sources ?? 0} /></b>&nbsp;SOURCES</span>
+          <span className="text-bone/30">·</span>
+          <span>NEXT <b className="text-amber">{formatCountdown(countdown)}</b></span>
           <span className="ml-auto inline-flex items-center gap-1.5">
             <span className="inline-block w-1.5 h-1.5 rounded-full bg-signal animate-pulse" />
             LIVE
           </span>
         </div>
 
+        {/* ── Source marquee ticker ── */}
+        {!loading && sources.length > 0 && (
+          <div className="relative z-10 bg-paper border-b border-bone overflow-hidden whitespace-nowrap py-1.5 font-mono text-[10px] uppercase tracking-[0.18em] text-faint">
+            <div className="inline-flex animate-marquee gap-6 pr-6">
+              {[...sources, ...sources].map((s, i) => (
+                <span key={i} className="inline-flex items-center gap-1.5">
+                  <span className="w-1 h-1 rounded-full bg-ink" />
+                  {s.name}
+                  <span className="text-ink/30">[{s.count}]</span>
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* ── Content ── */}
-        <main className="relative z-10 flex-1 overflow-y-auto app-shell pb-tab">
+        <main ref={mainRef} className="relative z-10 flex-1 overflow-y-auto app-shell pb-tab">
           {loading ? (
             <LoadingState />
           ) : error ? (
             <ErrorState message={error} onRetry={loadAll} />
           ) : articles.length === 0 ? (
             <EmptyState onRefresh={onRefresh} refreshing={refreshing} />
-          ) : tab === "feed" ? (
-            <FeedScreen
-              hero={hero}
-              feed={restOfFeed}
-              categories={categories}
-              activeCat={activeCat}
-              setActiveCat={setActiveCat}
-              activeSrc={activeSrc}
-              setActiveSrc={setActiveSrc}
-              saved={saved}
-              toggleSave={toggleSave}
-            />
-          ) : tab === "trending" ? (
-            <TrendingScreen articles={trending} saved={saved} toggleSave={toggleSave} />
-          ) : tab === "saved" ? (
-            <SavedScreen articles={savedArticles} saved={saved} toggleSave={toggleSave} />
-          ) : null}
+          ) : (
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={tab}
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -4 }}
+                transition={{ duration: 0.25, ease: "easeOut" }}
+              >
+                {tab === "feed" && (
+                  <FeedScreen
+                    hero={hero}
+                    feed={restOfFeed}
+                    categories={categories}
+                    activeCat={activeCat}
+                    setActiveCat={setActiveCat}
+                    activeSrc={activeSrc}
+                    setActiveSrc={setActiveSrc}
+                    saved={saved}
+                    toggleSave={toggleSave}
+                  />
+                )}
+                {tab === "trending" && (
+                  <TrendingScreen articles={trending} saved={saved} toggleSave={toggleSave} />
+                )}
+                {tab === "saved" && (
+                  <SavedScreen articles={savedArticles} saved={saved} toggleSave={toggleSave} />
+                )}
+              </motion.div>
+            </AnimatePresence>
+          )}
         </main>
 
         {/* ── Bottom Tab Bar ── */}
@@ -261,7 +264,9 @@ export default function App() {
                   className="flex-1 py-3 flex flex-col items-center gap-1 tactile relative"
                   data-testid={`bottom-tab-${t.id}`}
                 >
-                  <Icon size={20} weight={active ? "fill" : "regular"} className={active ? "text-ink" : "text-muted"} />
+                  <motion.div animate={{ y: active ? -1 : 0 }} transition={{ type: "spring", stiffness: 400, damping: 25 }}>
+                    <Icon size={20} weight={active ? "fill" : "regular"} className={active ? "text-ink" : "text-muted"} />
+                  </motion.div>
                   <span
                     className={`font-mono text-[9px] uppercase tracking-[0.18em] ${
                       active ? "text-ink font-bold" : "text-muted"
@@ -271,8 +276,9 @@ export default function App() {
                   </span>
                   {active && (
                     <motion.span
-                      layoutId="tab-dot"
-                      className="absolute bottom-2 w-1 h-1 rounded-full bg-klein"
+                      layoutId="tab-indicator"
+                      className="absolute -bottom-px left-1/4 right-1/4 h-[2px] bg-klein"
+                      transition={{ type: "spring", stiffness: 400, damping: 30 }}
                     />
                   )}
                 </button>
@@ -288,10 +294,7 @@ export default function App() {
           onClose={() => setFiltersOpen(false)}
           sources={sources}
           activeSrc={activeSrc}
-          onSelect={(s) => {
-            setActiveSrc(s);
-            setFiltersOpen(false);
-          }}
+          onSelect={(s) => { setActiveSrc(s); setFiltersOpen(false); }}
         />
       </div>
     </div>
@@ -305,14 +308,20 @@ export default function App() {
 function FeedScreen({ hero, feed, categories, activeCat, setActiveCat, activeSrc, setActiveSrc, saved, toggleSave }) {
   return (
     <>
-      {/* Category chip rail */}
+      {/* Category chip rail with sliding active background */}
       <div className="border-b border-bone bg-paper sticky top-0 z-10">
         <div className="flex items-center gap-2 px-5 py-3 overflow-x-auto no-scrollbar">
-          <Chip active={!activeCat && !activeSrc} onClick={() => { setActiveCat(null); setActiveSrc(null); }} testId="chip-all">
+          <Chip
+            id="all"
+            active={!activeCat && !activeSrc}
+            onClick={() => { setActiveCat(null); setActiveSrc(null); }}
+            testId="chip-all"
+          >
             ALL
           </Chip>
           {categories.map((c, i) => (
             <Chip
+              id={c.name}
               key={c.name}
               active={activeCat === c.name}
               dot={CAT_COLORS[c.name]}
@@ -326,33 +335,26 @@ function FeedScreen({ hero, feed, categories, activeCat, setActiveCat, activeSrc
         </div>
       </div>
 
-      {/* Active filter banner */}
       {activeSrc && (
-        <div className="px-5 py-2 bg-klein text-paper font-mono text-[10px] uppercase tracking-[0.18em] flex items-center justify-between">
+        <motion.div
+          initial={{ height: 0, opacity: 0 }}
+          animate={{ height: "auto", opacity: 1 }}
+          exit={{ height: 0, opacity: 0 }}
+          className="px-5 py-2 bg-klein text-paper font-mono text-[10px] uppercase tracking-[0.18em] flex items-center justify-between"
+        >
           <span>FILTERING · {activeSrc}</span>
           <button onClick={() => setActiveSrc(null)} className="underline tactile" data-testid="clear-src-filter">
             CLEAR
           </button>
-        </div>
+        </motion.div>
       )}
 
       {hero && <HeroStory article={hero} />}
 
-      <div className="px-5 pt-5 pb-3 flex items-end justify-between">
-        <div>
-          <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-faint">/ stream</p>
-          <h2 className="font-heading font-extrabold text-2xl tracking-tight text-ink">Latest dispatches</h2>
-        </div>
-        <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted">
-          {feed.length} ITEM{feed.length !== 1 ? "S" : ""}
-        </p>
-      </div>
+      <SectionHeader number="02" label="STREAM" title="Latest dispatches" count={feed.length} />
 
       {feed.length === 0 ? (
-        <div className="px-5 py-12 text-center">
-          <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-faint">/ empty</p>
-          <p className="mt-2 font-heading text-lg font-bold text-ink">No stories in this filter</p>
-        </div>
+        <EmptyFilter />
       ) : (
         feed.map((a, i) => (
           <ArticleCard key={a.id || i} article={a} index={i} saved={saved} onToggleSave={toggleSave} />
@@ -367,9 +369,12 @@ function FeedScreen({ hero, feed, categories, activeCat, setActiveCat, activeSrc
 function TrendingScreen({ articles, saved, toggleSave }) {
   return (
     <>
-      <div className="px-5 pt-6 pb-2 border-b border-bone">
-        <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-signal">/ trending now</p>
-        <h2 className="font-heading font-black text-3xl tracking-[-0.02em] text-ink leading-none">
+      <div className="px-5 pt-7 pb-4 border-b border-bone bg-paper relative overflow-hidden">
+        <div className="absolute top-3 right-3 w-12 h-12 crosshatch opacity-30 pointer-events-none" />
+        <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-signal flex items-center gap-1.5">
+          <Sparkle size={11} weight="fill" /> TRENDING NOW
+        </p>
+        <h2 className="mt-1 font-heading font-black text-[34px] tracking-[-0.03em] text-ink leading-none">
           Community pulse.
         </h2>
         <p className="mt-2 text-sm text-muted">What the Hacker News crowd is voting up right now.</p>
@@ -386,6 +391,7 @@ function TrendingScreen({ articles, saved, toggleSave }) {
             key={a.id || i}
             article={a}
             index={i}
+            rank={i + 1}
             saved={saved}
             onToggleSave={toggleSave}
             testIdPrefix="trending-card"
@@ -400,23 +406,32 @@ function TrendingScreen({ articles, saved, toggleSave }) {
 function SavedScreen({ articles, saved, toggleSave }) {
   return (
     <>
-      <div className="px-5 pt-6 pb-3 border-b border-bone">
-        <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-klein">/ archive</p>
-        <h2 className="font-heading font-black text-3xl tracking-[-0.02em] text-ink leading-none">
+      <div className="px-5 pt-7 pb-4 border-b border-bone relative overflow-hidden">
+        <div className="absolute top-3 right-3 w-12 h-12 crosshatch opacity-30 pointer-events-none" />
+        <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-klein flex items-center gap-1.5">
+          <BookmarkSimple size={11} weight="fill" /> ARCHIVE
+        </p>
+        <h2 className="mt-1 font-heading font-black text-[34px] tracking-[-0.03em] text-ink leading-none">
           Saved for later.
         </h2>
         <p className="mt-2 text-sm text-muted">
-          {articles.length} article{articles.length !== 1 ? "s" : ""} pinned to your device.
+          <Counter value={articles.length} /> article{articles.length !== 1 ? "s" : ""} pinned to your device.
         </p>
       </div>
+
       {articles.length === 0 ? (
-        <div className="px-5 py-12 text-center">
-          <div className="mx-auto w-12 h-12 border-2 border-ink flex items-center justify-center mb-3">
-            <BookmarkSimple size={22} weight="bold" className="text-ink" />
-          </div>
-          <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-faint">/ empty stack</p>
-          <p className="mt-2 font-heading text-lg font-bold text-ink">Nothing saved yet</p>
-          <p className="mt-1 text-sm text-muted">Tap the bookmark on any article to pin it here.</p>
+        <div className="px-5 py-16 text-center">
+          <motion.div
+            initial={{ scale: 0.6, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ duration: 0.4 }}
+            className="mx-auto w-14 h-14 border-2 border-ink flex items-center justify-center mb-4"
+          >
+            <BookmarkSimple size={24} weight="bold" className="text-ink" />
+          </motion.div>
+          <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-faint">/ empty stack</p>
+          <p className="mt-2 font-heading text-xl font-bold text-ink">Nothing saved yet</p>
+          <p className="mt-1.5 text-sm text-muted">Tap the bookmark on any article to pin it here.</p>
         </div>
       ) : (
         articles.map((a, i) => (
@@ -436,21 +451,55 @@ function SavedScreen({ articles, saved, toggleSave }) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Small UI atoms
+// Atoms
 // ─────────────────────────────────────────────────────────────────────────────
 
-function Chip({ active, dot, onClick, children, testId }) {
+function Chip({ id, active, dot, onClick, children, testId }) {
   return (
     <button
       onClick={onClick}
       data-testid={testId}
-      className={`shrink-0 px-3.5 py-1.5 rounded-full border tactile font-mono text-[11px] uppercase tracking-[0.12em] flex items-center gap-1.5 ${
-        active ? "bg-ink text-paper border-ink" : "bg-transparent text-ink border-ink/70 hover:bg-bone/60"
-      }`}
+      className="relative shrink-0 px-3.5 py-1.5 rounded-full tactile font-mono text-[11px] uppercase tracking-[0.12em] flex items-center gap-1.5 z-10 border border-ink/70"
     >
-      {dot && <span className="inline-block w-1.5 h-1.5 rounded-full" style={{ background: dot }} />}
-      {children}
+      {active && (
+        <motion.span
+          layoutId="chip-bg"
+          className="absolute inset-0 rounded-full bg-ink"
+          transition={{ type: "spring", stiffness: 400, damping: 30 }}
+        />
+      )}
+      <span className={`relative z-10 inline-flex items-center gap-1.5 ${active ? "text-paper" : "text-ink"}`}>
+        {dot && <span className="inline-block w-1.5 h-1.5 rounded-full" style={{ background: active ? "#fff" : dot }} />}
+        {children}
+      </span>
     </button>
+  );
+}
+
+function SectionHeader({ number, label, title, count }) {
+  return (
+    <div className="px-5 pt-6 pb-3 flex items-end justify-between gap-3">
+      <div className="flex items-end gap-3">
+        <p className="font-heading font-black text-[28px] leading-none tracking-[-0.03em] text-ink/15">{number}</p>
+        <div>
+          <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-faint">/ {label}</p>
+          <h2 className="mt-0.5 font-heading font-extrabold text-2xl tracking-tight text-ink">{title}</h2>
+        </div>
+      </div>
+      <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted whitespace-nowrap">
+        <Counter value={count} /> ITEM{count !== 1 ? "S" : ""}
+      </p>
+    </div>
+  );
+}
+
+function EmptyFilter() {
+  return (
+    <div className="px-5 py-16 text-center">
+      <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-faint">/ empty</p>
+      <p className="mt-2 font-heading text-lg font-bold text-ink">No stories in this filter</p>
+      <p className="mt-1 text-sm text-muted">Try a different category or source.</p>
+    </div>
   );
 }
 
@@ -467,6 +516,16 @@ function LoadingState() {
           transition={{ duration: 1.2, repeat: Infinity, ease: "linear" }}
           style={{ width: "50%" }}
         />
+      </div>
+      {/* skeleton list */}
+      <div className="mt-8 w-full max-w-sm space-y-4">
+        {[0, 1, 2].map((i) => (
+          <div key={i} className="border-b border-bone pb-4 animate-pulse">
+            <div className="h-3 w-32 bg-bone rounded" />
+            <div className="mt-2 h-4 w-full bg-bone rounded" />
+            <div className="mt-1.5 h-4 w-3/4 bg-bone rounded" />
+          </div>
+        ))}
       </div>
     </div>
   );
@@ -509,12 +568,18 @@ function EmptyState({ onRefresh, refreshing }) {
 
 function Footer() {
   return (
-    <footer className="px-5 py-10 mt-2 border-t border-bone text-center">
+    <footer className="px-5 py-10 mt-2 border-t border-bone text-center relative overflow-hidden">
+      <div className="flex items-center justify-center gap-2 mb-2">
+        <Logo size={22} />
+        <span className="font-heading font-black text-[12px] tracking-[-0.02em] text-ink">
+          SYN<span className="text-klein">·</span>APSE
+        </span>
+      </div>
       <p className="font-mono text-[9px] tracking-[0.22em] uppercase text-faint">
-        SYNAPSE · AI NEWS TERMINAL
+        FETCHED FROM 12 SOURCES · UPDATED EVERY 30 MIN
       </p>
       <p className="mt-1 font-mono text-[9px] tracking-[0.22em] uppercase text-faint">
-        FETCHED FROM 12 SOURCES · UPDATED EVERY 30 MIN
+        // END OF FEED //
       </p>
     </footer>
   );
