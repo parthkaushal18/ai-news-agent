@@ -325,6 +325,43 @@ def trigger_refresh():
     return {"message": "Refresh triggered", "in_progress": True}
 
 
+def _trending_score(article: dict) -> float:
+    """Heuristic trending score.
+    - Recency decay (last 24h gets up to +24)
+    - Hacker News articles get a boost proportional to their points
+    """
+    pub = article.get("published") or ""
+    try:
+        dt = datetime.fromisoformat(pub.replace("Z", "+00:00"))
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        age_h = (datetime.now(timezone.utc) - dt).total_seconds() / 3600.0
+    except Exception:
+        age_h = 48.0
+    recency = max(0.0, 24.0 - age_h)
+    boost = 0.0
+    if article.get("source") == "Hacker News":
+        m = re.match(r"(\d+)\s*points", article.get("summary", ""))
+        if m:
+            boost = min(60.0, int(m.group(1)) / 1.5)
+    return recency + boost
+
+
+@api.get("/trending")
+def get_trending(limit: int = Query(20, le=60)):
+    scored = [
+        {**a, "_score": _trending_score(a)}
+        for a in news_store
+    ]
+    scored.sort(key=lambda x: x["_score"], reverse=True)
+    items = [{k: v for k, v in a.items() if k != "_score"} for a in scored[:limit]]
+    return {
+        "total": len(items),
+        "articles": items,
+        "last_fetch": last_fetch.isoformat() if last_fetch else None,
+    }
+
+
 app.include_router(api)
 
 

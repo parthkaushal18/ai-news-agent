@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState, useCallback } from "react";
+import React, { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import axios from "axios";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -7,8 +7,11 @@ import {
   TrendUp,
   MagnifyingGlass,
   BookmarkSimple,
-  Funnel,
+  SlidersHorizontal,
   Sparkle,
+  BellRinging,
+  Bell,
+  BellSlash,
 } from "@phosphor-icons/react";
 
 import { CAT_COLORS, formatCountdown } from "./constants";
@@ -18,7 +21,10 @@ import Counter from "./components/Counter";
 import ArticleCard from "./components/ArticleCard";
 import HeroStory from "./components/HeroStory";
 import SearchSheet from "./components/SearchSheet";
-import FiltersSheet from "./components/FiltersSheet";
+import FiltersSheet, { DEFAULT_FILTERS } from "./components/FiltersSheet";
+import ArticleReader from "./components/ArticleReader";
+import NewStoriesToast from "./components/NewStoriesToast";
+import useLiveNotifications from "./hooks/useLiveNotifications";
 
 const BACKEND = process.env.REACT_APP_BACKEND_URL || "";
 const API = `${BACKEND}/api`;
@@ -30,6 +36,8 @@ const TABS = [
   { id: "search", label: "Search" },
   { id: "saved", label: "Saved" },
 ];
+
+const WINDOW_MS = { anytime: Infinity, "1h": 3.6e6, "24h": 8.64e7, "7d": 6.048e8 };
 
 function useSaved() {
   const [saved, setSaved] = useState(() => {
@@ -45,8 +53,41 @@ function useSaved() {
   return [saved, toggle];
 }
 
+function commentsOf(article) {
+  const m = (article.summary || "").match(/(\d+)\s*comments/i);
+  return m ? parseInt(m[1], 10) : 0;
+}
+
+function applyFilters(articles, f) {
+  if (!Array.isArray(articles)) return [];
+  const winMs = WINDOW_MS[f.window] ?? Infinity;
+  const now = Date.now();
+  let items = articles.filter((a) => {
+    if (f.categories?.length && !f.categories.includes(a.category)) return false;
+    if (winMs !== Infinity) {
+      const t = a.published ? new Date(a.published).getTime() : 0;
+      if (!t || now - t > winMs) return false;
+    }
+    return true;
+  });
+
+  if (f.sort === "discussed") {
+    items = [...items].sort((a, b) => commentsOf(b) - commentsOf(a));
+  } else if (f.sort === "trending") {
+    items = [...items].sort((a, b) => {
+      const ts = (x) => {
+        const ageH = (now - new Date(x.published || 0).getTime()) / 3.6e6;
+        return Math.max(0, 24 - ageH) + (x.source === "Hacker News" ? commentsOf(x) / 4 : 0);
+      };
+      return ts(b) - ts(a);
+    });
+  }
+  return items;
+}
+
 export default function App() {
   const [articles, setArticles] = useState([]);
+  const [trending, setTrending] = useState([]);
   const [sources, setSources] = useState([]);
   const [categories, setCategories] = useState([]);
   const [health, setHealth] = useState(null);
@@ -54,27 +95,29 @@ export default function App() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
 
-  const [activeCat, setActiveCat] = useState(null);
-  const [activeSrc, setActiveSrc] = useState(null);
+  const [filters, setFilters] = useState(DEFAULT_FILTERS);
   const [tab, setTab] = useState("feed");
   const [searchOpen, setSearchOpen] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [splashDone, setSplashDone] = useState(false);
+  const [reader, setReader] = useState(null);
 
   const [saved, toggleSave] = useSaved();
   const [countdown, setCountdown] = useState(0);
-  const mainRef = React.useRef(null);
+  const mainRef = useRef(null);
 
   const loadAll = useCallback(async () => {
     try {
-      const [news, sourcesRes, healthRes] = await Promise.all([
+      const [news, trend, srcRes, healthRes] = await Promise.all([
         axios.get(`${API}/news?limit=120`),
+        axios.get(`${API}/trending?limit=20`),
         axios.get(`${API}/sources`),
         axios.get(`${API}/health`),
       ]);
       setArticles(news.data.articles || []);
-      setSources(sourcesRes.data.sources || []);
-      setCategories(sourcesRes.data.categories || []);
+      setTrending(trend.data.articles || []);
+      setSources(srcRes.data.sources || []);
+      setCategories(srcRes.data.categories || []);
       setHealth(healthRes.data);
       setCountdown(healthRes.data.next_fetch_in || 0);
       setError(null);
@@ -85,10 +128,13 @@ export default function App() {
     }
   }, []);
 
+  // Initial + interval auto-refresh + on tab focus
   useEffect(() => {
     loadAll();
-    const id = setInterval(loadAll, 5 * 60 * 1000);
-    return () => clearInterval(id);
+    const id = setInterval(loadAll, 60 * 1000); // every minute
+    const onVis = () => { if (!document.hidden) loadAll(); };
+    document.addEventListener("visibilitychange", onVis);
+    return () => { clearInterval(id); document.removeEventListener("visibilitychange", onVis); };
   }, [loadAll]);
 
   useEffect(() => {
@@ -96,29 +142,25 @@ export default function App() {
     return () => clearInterval(id);
   }, []);
 
+  // Live notifications
+  const { permission, requestPermission, unseenIds, dismissAll } = useLiveNotifications(
+    articles,
+    { enabled: true, max: 3 }
+  );
+
   const onRefresh = async () => {
     setRefreshing(true);
     try {
       await axios.post(`${API}/refresh`);
-      setTimeout(loadAll, 4000);
-      setTimeout(() => { loadAll(); setRefreshing(false); }, 14000);
+      setTimeout(loadAll, 3500);
+      setTimeout(() => { loadAll(); setRefreshing(false); }, 12000);
     } catch { setRefreshing(false); }
   };
 
-  const filtered = useMemo(() => {
-    let items = articles;
-    if (activeCat) items = items.filter((a) => a.category === activeCat);
-    if (activeSrc) items = items.filter((a) => a.source === activeSrc);
-    return items;
-  }, [articles, activeCat, activeSrc]);
-
+  // Apply filters to the global articles list
+  const filtered = useMemo(() => applyFilters(articles, filters), [articles, filters]);
   const hero = filtered[0];
   const restOfFeed = filtered.slice(1);
-
-  const trending = useMemo(
-    () => articles.filter((a) => a.source === "Hacker News" || a.category === "Community").slice(0, 20),
-    [articles]
-  );
 
   const savedArticles = useMemo(
     () => articles.filter((a) => saved.includes(a.id)),
@@ -128,10 +170,25 @@ export default function App() {
   const onTab = (id) => {
     if (id === "search") { setSearchOpen(true); return; }
     setTab(id);
-    // Reset scroll on tab change so users always start at top
     requestAnimationFrame(() => mainRef.current?.scrollTo({ top: 0, behavior: "smooth" }));
   };
   const closeSearch = () => { setSearchOpen(false); if (tab === "search") setTab("feed"); };
+
+  const openReader = useCallback((a) => setReader(a), []);
+  const closeReader = useCallback(() => setReader(null), []);
+
+  const onTapNewStories = () => {
+    dismissAll();
+    setTab("feed");
+    setFilters(DEFAULT_FILTERS);
+    requestAnimationFrame(() => mainRef.current?.scrollTo({ top: 0, behavior: "smooth" }));
+  };
+
+  // Active filter count (for the funnel badge)
+  const activeFilterCount =
+    (filters.window !== "anytime" ? 1 : 0) +
+    (filters.sort !== "newest" ? 1 : 0) +
+    (filters.categories?.length || 0);
 
   return (
     <div className="h-[100dvh] bg-ink flex justify-center overflow-hidden">
@@ -139,7 +196,6 @@ export default function App() {
         className="relative app-shell w-full max-w-md h-full bg-paper overflow-hidden flex flex-col grain"
         data-testid="app-shell"
       >
-        {/* ── Splash ── */}
         {!splashDone && <Splash onDone={() => setSplashDone(true)} />}
 
         {/* ── Top Bar ── */}
@@ -155,14 +211,19 @@ export default function App() {
           </div>
 
           <div className="ml-auto flex items-center gap-1">
+            <BellButton permission={permission} onClick={requestPermission} />
             <button
               onClick={() => setFiltersOpen(true)}
               className="relative p-2 tactile text-ink"
-              aria-label="Filter sources"
+              aria-label="Filters"
               data-testid="top-filters-btn"
             >
-              <Funnel size={18} weight={activeSrc ? "fill" : "regular"} />
-              {activeSrc && <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-klein" />}
+              <SlidersHorizontal size={18} weight={activeFilterCount ? "fill" : "regular"} />
+              {activeFilterCount > 0 && (
+                <span className="absolute top-1 right-1 min-w-[14px] h-[14px] px-1 rounded-full bg-klein text-paper text-[8px] font-mono font-bold flex items-center justify-center">
+                  {activeFilterCount}
+                </span>
+              )}
             </button>
             <button
               onClick={onRefresh}
@@ -176,7 +237,7 @@ export default function App() {
           </div>
         </header>
 
-        {/* ── Stats Strip (animated counters + marquee on the right) ── */}
+        {/* Stats Strip */}
         <div
           className="relative z-10 bg-ink text-paper px-5 py-1.5 flex items-center gap-3 font-mono text-[10px] uppercase tracking-[0.16em] overflow-hidden"
           data-testid="stats-strip"
@@ -192,7 +253,14 @@ export default function App() {
           </span>
         </div>
 
-        {/* ── Source marquee ticker ── */}
+        {/* New-stories toast */}
+        <NewStoriesToast
+          count={unseenIds.length}
+          onTap={onTapNewStories}
+          onDismiss={dismissAll}
+        />
+
+        {/* Source marquee */}
         {!loading && sources.length > 0 && (
           <div className="relative z-10 bg-paper border-b border-bone overflow-hidden whitespace-nowrap py-1.5 font-mono text-[10px] uppercase tracking-[0.18em] text-faint">
             <div className="inline-flex animate-marquee gap-6 pr-6">
@@ -207,7 +275,7 @@ export default function App() {
           </div>
         )}
 
-        {/* ── Content ── */}
+        {/* Content */}
         <main ref={mainRef} className="relative z-10 flex-1 overflow-y-auto app-shell pb-tab">
           {loading ? (
             <LoadingState />
@@ -228,27 +296,36 @@ export default function App() {
                   <FeedScreen
                     hero={hero}
                     feed={restOfFeed}
+                    filters={filters}
+                    setFilters={setFilters}
                     categories={categories}
-                    activeCat={activeCat}
-                    setActiveCat={setActiveCat}
-                    activeSrc={activeSrc}
-                    setActiveSrc={setActiveSrc}
                     saved={saved}
                     toggleSave={toggleSave}
+                    openReader={openReader}
                   />
                 )}
                 {tab === "trending" && (
-                  <TrendingScreen articles={trending} saved={saved} toggleSave={toggleSave} />
+                  <TrendingScreen
+                    articles={trending}
+                    saved={saved}
+                    toggleSave={toggleSave}
+                    openReader={openReader}
+                  />
                 )}
                 {tab === "saved" && (
-                  <SavedScreen articles={savedArticles} saved={saved} toggleSave={toggleSave} />
+                  <SavedScreen
+                    articles={savedArticles}
+                    saved={saved}
+                    toggleSave={toggleSave}
+                    openReader={openReader}
+                  />
                 )}
               </motion.div>
             </AnimatePresence>
           )}
         </main>
 
-        {/* ── Bottom Tab Bar ── */}
+        {/* Bottom tabs */}
         <nav
           className="absolute left-0 right-0 bottom-0 z-20 bg-paper/85 backdrop-blur-xl border-t border-ink bottom-safe"
           data-testid="bottom-tab-nav"
@@ -287,14 +364,23 @@ export default function App() {
           </div>
         </nav>
 
-        {/* ── Sheets ── */}
-        <SearchSheet open={searchOpen} onClose={closeSearch} articles={articles} />
+        {/* Sheets / Overlays */}
+        <SearchSheet open={searchOpen} onClose={closeSearch} articles={articles} onOpen={openReader} />
         <FiltersSheet
           open={filtersOpen}
           onClose={() => setFiltersOpen(false)}
-          sources={sources}
-          activeSrc={activeSrc}
-          onSelect={(s) => { setActiveSrc(s); setFiltersOpen(false); }}
+          value={filters}
+          categories={categories}
+          onApply={(next) => {
+            setFilters(next);
+            requestAnimationFrame(() => mainRef.current?.scrollTo({ top: 0, behavior: "smooth" }));
+          }}
+        />
+        <ArticleReader
+          article={reader}
+          onClose={closeReader}
+          saved={saved}
+          onToggleSave={toggleSave}
         />
       </div>
     </div>
@@ -305,27 +391,36 @@ export default function App() {
 // Sub-screens
 // ─────────────────────────────────────────────────────────────────────────────
 
-function FeedScreen({ hero, feed, categories, activeCat, setActiveCat, activeSrc, setActiveSrc, saved, toggleSave }) {
+function FeedScreen({ hero, feed, filters, setFilters, categories, saved, toggleSave, openReader }) {
+  // Chip rail: quick category toggle that syncs with multi-cat filter state.
+  const toggleCat = (name) => {
+    setFilters((f) => {
+      const list = f.categories || [];
+      const next = list.includes(name) ? list.filter((c) => c !== name) : [...list, name];
+      return { ...f, categories: next };
+    });
+  };
+
+  const selected = filters.categories || [];
+  const isAll = selected.length === 0 && filters.window === "anytime" && filters.sort === "newest";
+
   return (
     <>
-      {/* Category chip rail with sliding active background */}
       <div className="border-b border-bone bg-paper sticky top-0 z-10">
         <div className="flex items-center gap-2 px-5 py-3 overflow-x-auto no-scrollbar">
           <Chip
-            id="all"
-            active={!activeCat && !activeSrc}
-            onClick={() => { setActiveCat(null); setActiveSrc(null); }}
+            active={isAll}
+            onClick={() => setFilters({ ...filters, categories: [] })}
             testId="chip-all"
           >
             ALL
           </Chip>
           {categories.map((c, i) => (
             <Chip
-              id={c.name}
               key={c.name}
-              active={activeCat === c.name}
+              active={selected.includes(c.name)}
               dot={CAT_COLORS[c.name]}
-              onClick={() => { setActiveCat(activeCat === c.name ? null : c.name); setActiveSrc(null); }}
+              onClick={() => toggleCat(c.name)}
               testId={`chip-cat-${i}`}
             >
               {c.name}
@@ -335,21 +430,28 @@ function FeedScreen({ hero, feed, categories, activeCat, setActiveCat, activeSrc
         </div>
       </div>
 
-      {activeSrc && (
+      {/* Active-filter info banner (window + sort) */}
+      {(filters.window !== "anytime" || filters.sort !== "newest") && (
         <motion.div
           initial={{ height: 0, opacity: 0 }}
           animate={{ height: "auto", opacity: 1 }}
-          exit={{ height: 0, opacity: 0 }}
           className="px-5 py-2 bg-klein text-paper font-mono text-[10px] uppercase tracking-[0.18em] flex items-center justify-between"
         >
-          <span>FILTERING · {activeSrc}</span>
-          <button onClick={() => setActiveSrc(null)} className="underline tactile" data-testid="clear-src-filter">
+          <span>
+            {filters.sort !== "newest" ? `${filters.sort.toUpperCase()} · ` : ""}
+            {filters.window !== "anytime" ? filters.window.toUpperCase() : ""}
+          </span>
+          <button
+            onClick={() => setFilters({ ...filters, window: "anytime", sort: "newest" })}
+            className="underline tactile"
+            data-testid="clear-filters-link"
+          >
             CLEAR
           </button>
         </motion.div>
       )}
 
-      {hero && <HeroStory article={hero} />}
+      {hero && <HeroStory article={hero} onOpen={openReader} />}
 
       <SectionHeader number="02" label="STREAM" title="Latest dispatches" count={feed.length} />
 
@@ -357,7 +459,14 @@ function FeedScreen({ hero, feed, categories, activeCat, setActiveCat, activeSrc
         <EmptyFilter />
       ) : (
         feed.map((a, i) => (
-          <ArticleCard key={a.id || i} article={a} index={i} saved={saved} onToggleSave={toggleSave} />
+          <ArticleCard
+            key={a.id || i}
+            article={a}
+            index={i}
+            saved={saved}
+            onToggleSave={toggleSave}
+            onOpen={openReader}
+          />
         ))
       )}
 
@@ -366,7 +475,7 @@ function FeedScreen({ hero, feed, categories, activeCat, setActiveCat, activeSrc
   );
 }
 
-function TrendingScreen({ articles, saved, toggleSave }) {
+function TrendingScreen({ articles, saved, toggleSave, openReader }) {
   return (
     <>
       <div className="px-5 pt-7 pb-4 border-b border-bone bg-paper relative overflow-hidden">
@@ -375,9 +484,11 @@ function TrendingScreen({ articles, saved, toggleSave }) {
           <Sparkle size={11} weight="fill" /> TRENDING NOW
         </p>
         <h2 className="mt-1 font-heading font-black text-[34px] tracking-[-0.03em] text-ink leading-none">
-          Community pulse.
+          What&rsquo;s hot.
         </h2>
-        <p className="mt-2 text-sm text-muted">What the Hacker News crowd is voting up right now.</p>
+        <p className="mt-2 text-sm text-muted">
+          Top stories across all sources — ranked by recency and community signal.
+        </p>
       </div>
 
       {articles.length === 0 ? (
@@ -394,6 +505,7 @@ function TrendingScreen({ articles, saved, toggleSave }) {
             rank={i + 1}
             saved={saved}
             onToggleSave={toggleSave}
+            onOpen={openReader}
             testIdPrefix="trending-card"
           />
         ))
@@ -403,7 +515,7 @@ function TrendingScreen({ articles, saved, toggleSave }) {
   );
 }
 
-function SavedScreen({ articles, saved, toggleSave }) {
+function SavedScreen({ articles, saved, toggleSave, openReader }) {
   return (
     <>
       <div className="px-5 pt-7 pb-4 border-b border-bone relative overflow-hidden">
@@ -441,6 +553,7 @@ function SavedScreen({ articles, saved, toggleSave }) {
             index={i}
             saved={saved}
             onToggleSave={toggleSave}
+            onOpen={openReader}
             testIdPrefix="saved-card"
           />
         ))
@@ -454,7 +567,27 @@ function SavedScreen({ articles, saved, toggleSave }) {
 // Atoms
 // ─────────────────────────────────────────────────────────────────────────────
 
-function Chip({ id, active, dot, onClick, children, testId }) {
+function BellButton({ permission, onClick }) {
+  const Icon = permission === "granted" ? BellRinging : permission === "denied" ? BellSlash : Bell;
+  const tone =
+    permission === "granted" ? "text-klein" : permission === "denied" ? "text-faint" : "text-ink";
+  return (
+    <button
+      onClick={onClick}
+      className={`relative p-2 tactile ${tone}`}
+      aria-label="Notifications"
+      data-testid="top-bell-btn"
+      title={permission === "granted" ? "Live notifications enabled" : "Enable live notifications"}
+    >
+      <Icon size={18} weight={permission === "granted" ? "fill" : "regular"} />
+      {permission === "granted" && (
+        <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-signal animate-pulse" />
+      )}
+    </button>
+  );
+}
+
+function Chip({ active, dot, onClick, children, testId }) {
   return (
     <button
       onClick={onClick}
@@ -463,7 +596,7 @@ function Chip({ id, active, dot, onClick, children, testId }) {
     >
       {active && (
         <motion.span
-          layoutId="chip-bg"
+          layoutId={`chip-bg-${testId}`}
           className="absolute inset-0 rounded-full bg-ink"
           transition={{ type: "spring", stiffness: 400, damping: 30 }}
         />
@@ -498,7 +631,7 @@ function EmptyFilter() {
     <div className="px-5 py-16 text-center">
       <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-faint">/ empty</p>
       <p className="mt-2 font-heading text-lg font-bold text-ink">No stories in this filter</p>
-      <p className="mt-1 text-sm text-muted">Try a different category or source.</p>
+      <p className="mt-1 text-sm text-muted">Try widening your time window or clearing categories.</p>
     </div>
   );
 }
@@ -517,7 +650,6 @@ function LoadingState() {
           style={{ width: "50%" }}
         />
       </div>
-      {/* skeleton list */}
       <div className="mt-8 w-full max-w-sm space-y-4">
         {[0, 1, 2].map((i) => (
           <div key={i} className="border-b border-bone pb-4 animate-pulse">
@@ -576,7 +708,7 @@ function Footer() {
         </span>
       </div>
       <p className="font-mono text-[9px] tracking-[0.22em] uppercase text-faint">
-        FETCHED FROM 12 SOURCES · UPDATED EVERY 30 MIN
+        FETCHED FROM 12 SOURCES · AUTO-REFRESH EVERY MIN
       </p>
       <p className="mt-1 font-mono text-[9px] tracking-[0.22em] uppercase text-faint">
         // END OF FEED //

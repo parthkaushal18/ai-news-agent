@@ -1,0 +1,31 @@
+{
+  "summary": "Iteration 3 regression + new-feature testing on SYNAPSE AI News. Backend: 11/11 pytest pass — added 3 tests for /api/trending (default payload + schema/no _score leak, ?limit=5, HN articles in top-10 by trending heuristic). Frontend on 414x896 mobile viewport: (a) ArticleReader opens correctly from article-card-N-link, hero-top-story-link and search-result-N — all 6 internal testids present (reader-close-btn, reader-share-btn, reader-save-btn, reader-open-original-btn, reader-back-link, reader-content) and the big CTA shows 'OPEN ON <source>.com'. Reader Save toggles and persists to Saved tab; Reader Share copies URL (or calls navigator.share); Reader Close + Back-link both dismiss the sheet. (b) Opening a search-result auto-closes the SearchSheet (search-sheet detached, article-reader present). (c) FiltersSheet shows all 3 sections (filter-window-{anytime,1h,24h,7d}, filter-sort-{newest,trending,discussed}, filter-category-N), Apply commits filters, Reset+Apply clears them, funnel badge shows '3' when window=24h + sort=trending + 1 category selected and disappears after Reset. The klein-blue active-filter banner with clear-filters-link appears when window!=anytime OR sort!=newest. (d) Trending tab — verified on a fresh load AND after Feed→Saved→Trending re-navigation: shows 'TRENDING NOW' eyebrow, 'What's hot.' headline, and ranked 01/02/03... cards with data-testid='trending-card-N' (HN articles at the top of the list, matching the backend heuristic). (e) NewStoriesToast does NOT appear on first load (baseline behaviour verified). (f) Bell button (top-bell-btn) renders with default icon when permission='default'. Auto-refresh interval verified by code review (setInterval(loadAll, 60_000) + visibilitychange listener in App.js useEffect). NO blocking issues found.",
+  "backend_issues": { "critical": [], "minor": [] },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "ArticleReader", "issues": ["CTA shows '<source>.com' literally including spaces, e.g. 'Hacker News.com' or 'TechCrunch AI.com'. Looks slightly odd for multi-word source names — consider mapping to a real domain or just showing 'Open original article'."]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/test_news_api.py", "/app/test_reports/pytest/pytest_results.xml"],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "App.js is now ~720 lines and still mixes screen components (FeedScreen, TrendingScreen, SavedScreen) and atoms (Chip, SectionHeader, LoadingState, ErrorState, EmptyState, Footer, BellButton) — recommend extracting these into /components/screens and /components/atoms; same comment as iteration_1/2.",
+    "App.js onRefresh uses fixed setTimeout(3500)+setTimeout(12000) — fine but consider polling /api/health.fetch_count for snappier feedback.",
+    "useSaved hook stores raw IDs in localStorage and never prunes IDs no longer present in news_store; over time the array can grow unbounded. Cosmetic.",
+    "useLiveNotifications fires native Notification inside a useEffect on `articles` change — works, but on tab background-vs-foreground race could miss a tick if Notification.permission flips between check and constructor. Wrap the constructor in try/catch (already done) is sufficient.",
+    "backend/server.py: per-RSS-feed timeout still not set (feedparser.parse with no timeout). One slow feed can block the background fetch loop. Not regressing this iteration but worth a single requests.get(timeout=10) + feedparser.parse(response.content)."
+  ],
+  "updated_files": ["/app/backend/tests/test_news_api.py"],
+  "success_rate": {
+    "backend": "100% (11/11 pytest including 3 new /api/trending tests)",
+    "frontend": "100% (ArticleReader from card/hero/search, reader save/share/close, FiltersSheet 3 sections + badge + Reset, active-filter banner+clear, Trending tab renders 20 cards on fresh load AND after re-navigation, NewStoriesToast suppressed on first load, Bell button visible)"
+  },
+  "test_credentials": "N/A — app has no authentication",
+  "seed_data_creation": "None — backend auto-fetches live RSS/HN/arXiv data (96 articles cached at test time)",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "All 11 pytest cases in /app/backend/tests/test_news_api.py pass against the public preview URL. New /api/trending endpoint returns {total, articles, last_fetch} sorted by recency+points heuristic; HN high-points stories appear in top 10. Frontend: splash detaches in ~2-2.3s — always wait for [data-testid='splash-screen'] state='detached' before interacting. ArticleReader uses a spring slide-up — give 600-900ms before screenshotting after opening. FiltersSheet apply emits filters via onApply prop and auto-closes the sheet; Reset only updates draft state — user MUST click Apply afterwards to commit. Caveat: when testing the Bell button, Playwright's `context.grant_permissions(['notifications'])` does NOT automatically set Notification.permission to 'granted' in the page — you must navigate the page to the URL FIRST, then await requestPermission via the bell click (Playwright auto-resolves it as 'granted' because the origin is whitelisted). One test in a long sequential script intermittently saw 0 trending cards right after switching tabs — rerunning on a fresh page proved Trending works correctly; this was a stale-state/timing race in the long script, NOT a product bug.",
+  "rca of the issue": "No bugs identified. ArticleReader, FiltersSheet, Trending and notifications hook all behave per spec. The only cosmetic comment is the literal '<source>.com' CTA on the reader for multi-word source names."
+}

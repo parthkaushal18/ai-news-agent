@@ -14,6 +14,7 @@ export default function ArticleCard({
   index,
   saved,
   onToggleSave,
+  onOpen,
   testIdPrefix = "article-card",
   rank,
 }) {
@@ -31,11 +32,10 @@ export default function ArticleCard({
       className="group relative border-b border-bone bg-paper hover:bg-bone/40 transition-colors"
       data-testid={`${testIdPrefix}-${index}`}
     >
-      <a
-        href={article.url}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="block px-5 py-5 tactile"
+      <button
+        type="button"
+        onClick={() => onOpen?.(article)}
+        className="block w-full text-left px-5 py-5 tactile"
         data-testid={`${testIdPrefix}-${index}-link`}
       >
         <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.12em] text-muted">
@@ -73,7 +73,7 @@ export default function ArticleCard({
             style={{ flex: 1 }}
           />
         </div>
-      </a>
+      </button>
 
       <motion.button
         whileTap={{ scale: 0.85 }}

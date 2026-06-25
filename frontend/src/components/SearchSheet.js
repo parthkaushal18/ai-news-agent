@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { X, MagnifyingGlass } from "@phosphor-icons/react";
 import { SRC_COLORS, CAT_COLORS, timeAgo } from "../constants";
 
-export default function SearchSheet({ open, onClose, articles }) {
+export default function SearchSheet({ open, onClose, articles, onOpen }) {
   const [q, setQ] = useState("");
   const inputRef = useRef(null);
 
@@ -81,12 +81,14 @@ export default function SearchSheet({ open, onClose, articles }) {
               </div>
             ) : (
               results.map((a, i) => (
-                <a
+                <button
                   key={a.id || i}
-                  href={a.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="block px-5 py-4 border-b border-bone tactile hover:bg-bone/40"
+                  type="button"
+                  onClick={() => {
+                    onOpen?.(a);
+                    onClose?.();
+                  }}
+                  className="block w-full text-left px-5 py-4 border-b border-bone tactile hover:bg-bone/40"
                   data-testid={`search-result-${i}`}
                 >
                   <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.12em] text-muted">
@@ -99,7 +101,7 @@ export default function SearchSheet({ open, onClose, articles }) {
                     <span className="ml-auto text-faint">{timeAgo(a.published)}</span>
                   </div>
                   <h3 className="mt-1.5 font-heading font-bold text-[16px] leading-snug text-ink line-clamp-2">{a.title}</h3>
-                </a>
+                </button>
               ))
             )}
           </div>

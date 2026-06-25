@@ -112,3 +112,37 @@ class TestRefresh:
         d = r.json()
         assert d.get("in_progress") is True
         assert "message" in d
+
+
+# ── Trending ──────────────────────────────────────────────────────────────────
+class TestTrending:
+    def test_trending_default(self, client):
+        r = client.get(f"{API}/trending", timeout=15)
+        assert r.status_code == 200
+        d = r.json()
+        assert "total" in d and "articles" in d and "last_fetch" in d
+        assert isinstance(d["articles"], list)
+        assert len(d["articles"]) > 0
+        # Default limit is 20
+        assert len(d["articles"]) <= 20
+        a = d["articles"][0]
+        for k in ("id", "title", "summary", "url", "source", "category", "published"):
+            assert k in a
+        # Score should not leak into response
+        assert "_score" not in a
+
+    def test_trending_limit_5(self, client):
+        r = client.get(f"{API}/trending?limit=5", timeout=15)
+        assert r.status_code == 200
+        d = r.json()
+        assert len(d["articles"]) <= 5
+        assert d["total"] == len(d["articles"])
+
+    def test_trending_hn_high_points_ranked_near_top(self, client):
+        r = client.get(f"{API}/trending?limit=20", timeout=15)
+        articles = r.json()["articles"]
+        # At least one Hacker News article should appear in the top 10
+        sources_top10 = [a["source"] for a in articles[:10]]
+        assert "Hacker News" in sources_top10, (
+            f"Expected HN in top 10 trending; got {sources_top10}"
+        )

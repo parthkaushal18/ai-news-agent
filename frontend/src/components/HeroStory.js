@@ -3,7 +3,7 @@ import { motion, useScroll, useTransform } from "framer-motion";
 import { ArrowUpRight, Lightning } from "@phosphor-icons/react";
 import { SRC_COLORS, CAT_COLORS, timeAgo, HERO_IMG } from "../constants";
 
-export default function HeroStory({ article }) {
+export default function HeroStory({ article, onOpen }) {
   const [reveal, setReveal] = useState(false);
   useEffect(() => {
     const t = setTimeout(() => setReveal(true), 60);
@@ -36,11 +36,10 @@ export default function HeroStory({ article }) {
         <span className="ml-auto text-faint">{timeAgo(article.published)}</span>
       </div>
 
-      <a
-        href={article.url}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="block px-5 pb-6 pt-3 tactile"
+      <button
+        type="button"
+        onClick={() => onOpen?.(article)}
+        className="block w-full text-left px-5 pb-6 pt-3 tactile"
         data-testid="hero-top-story-link"
       >
         {/* image with parallax + animated reveal mask */}
@@ -115,7 +114,7 @@ export default function HeroStory({ article }) {
             {article.source}
           </span>
         </motion.div>
-      </a>
+      </button>
     </motion.section>
   );
 }
