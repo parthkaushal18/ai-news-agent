@@ -31,6 +31,14 @@ export default function ArticleReader({ article, onClose, saved, onToggleSave })
   const mins = readTime(a.summary || a.title);
   const isSaved = saved?.includes(a.id);
 
+  // Derive a sensible domain from the article URL; fall back to source name.
+  let domain = a.source || "the source";
+  try {
+    if (a.url) domain = new URL(a.url).hostname.replace(/^www\./, "");
+  } catch {
+    /* ignore */
+  }
+
   const handleShare = async () => {
     if (navigator.share) {
       try {
@@ -197,7 +205,7 @@ export default function ArticleReader({ article, onClose, saved, onToggleSave })
                       OPEN ON
                     </p>
                     <p className="font-heading font-extrabold text-lg tracking-tight truncate">
-                      {a.source}.com
+                      {domain}
                     </p>
                   </div>
                   <ArrowUpRight size={22} weight="bold" />
